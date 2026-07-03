@@ -1,5 +1,5 @@
 import { GripVertical, RefreshCw, X } from "lucide-react";
-import type { Block, SourceKind } from "@/types";
+import type { Block, ContentItem, SourceKind } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { cn } from "@/lib/cn";
 
@@ -51,25 +51,76 @@ export function BlockCard({ block }: { block: Block }) {
         {block.items.length === 0 ? (
           <p className="text-xs text-neutral-500">No items yet.</p>
         ) : (
-          block.items.map((item) => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="block rounded-lg p-2 transition hover:bg-neutral-800"
-            >
-              <p className="text-sm leading-snug">{item.title}</p>
-              {item.meta && (
-                <p className="mt-0.5 text-xs text-neutral-500">{item.meta}</p>
-              )}
-              {item.summary && (
-                <p className="mt-1 text-xs text-neutral-400">{item.summary}</p>
-              )}
-            </a>
-          ))
+          block.items.map((item) =>
+            item.source === "youtube" ? (
+              <VideoCard key={item.id} item={item} />
+            ) : (
+              <LinkPreviewCard key={item.id} item={item} />
+            ),
+          )
         )}
       </div>
     </div>
+  );
+}
+
+/** YouTube-style: big 16:9 thumbnail, title + channel below. */
+function VideoCard({ item }: { item: ContentItem }) {
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+      className="block overflow-hidden rounded-lg border border-neutral-800 transition hover:border-neutral-600 hover:bg-neutral-800/50"
+    >
+      {item.thumbnail && (
+        <img
+          src={item.thumbnail}
+          alt=""
+          loading="lazy"
+          className="aspect-video w-full object-cover"
+        />
+      )}
+      <div className="p-2">
+        <p className="line-clamp-2 text-sm leading-snug">{item.title}</p>
+        {item.meta && (
+          <p className="mt-0.5 text-xs text-neutral-500">{item.meta}</p>
+        )}
+      </div>
+    </a>
+  );
+}
+
+/** Link-preview style (WhatsApp/OG): thumbnail beside title, source name, summary. */
+function LinkPreviewCard({ item }: { item: ContentItem }) {
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex gap-3 overflow-hidden rounded-lg border border-neutral-800 p-2 transition hover:border-neutral-600 hover:bg-neutral-800/50"
+    >
+      {item.thumbnail && (
+        <img
+          src={item.thumbnail}
+          alt=""
+          loading="lazy"
+          className="h-16 w-24 shrink-0 rounded-md object-cover"
+        />
+      )}
+      <div className="min-w-0">
+        {item.meta && (
+          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+            {item.meta}
+          </p>
+        )}
+        <p className="line-clamp-2 text-sm leading-snug">{item.title}</p>
+        {item.summary && (
+          <p className="mt-0.5 line-clamp-2 text-xs text-neutral-400">
+            {item.summary}
+          </p>
+        )}
+      </div>
+    </a>
   );
 }

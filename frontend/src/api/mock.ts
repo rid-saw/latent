@@ -1,5 +1,6 @@
 import type { Api } from "./client";
 import type { Block, ContentItem, SourceKind } from "@/types";
+import { defaultLayout } from "@/lib/layout";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -20,14 +21,16 @@ function titleFrom(q: string): string {
 }
 
 function fakeItem(query: string, source: SourceKind): ContentItem {
+  const id = crypto.randomUUID();
   return {
-    id: crypto.randomUUID(),
+    id,
     title: `Latest on "${titleFrom(query)}"`,
     url: "https://example.com",
     source,
     summary:
       "Mock result — the agent will replace this with a real, ranked item once the backend is wired.",
-    meta: "Source · just now",
+    meta: source === "youtube" ? "Channel · just now" : "Source · just now",
+    thumbnail: `https://picsum.photos/seed/${id.slice(0, 8)}/640/360`,
   };
 }
 
@@ -47,6 +50,16 @@ const seed: Block[] = [
         source: "papers",
         meta: "Nature Medicine · 2d ago",
         summary: "Survey of LLM-based diagnostics with a new benchmark.",
+        thumbnail: "https://picsum.photos/seed/natmed1/640/360",
+      },
+      {
+        id: "p2",
+        title: "Multimodal transformers for radiology report generation",
+        url: "https://example.com",
+        source: "papers",
+        meta: "arXiv · 8h ago",
+        summary: "SOTA on MIMIC-CXR with a fraction of the parameters.",
+        thumbnail: "https://picsum.photos/seed/arxiv2/640/360",
       },
     ],
   },
@@ -55,7 +68,7 @@ const seed: Block[] = [
     title: "AI research channels",
     query: "new videos from AI research youtube channels",
     source: "youtube",
-    layout: { x: 4, y: 0, w: 4, h: 4 },
+    layout: { x: 4, y: 0, w: 4, h: 6 },
     status: "ready",
     items: [
       {
@@ -64,6 +77,15 @@ const seed: Block[] = [
         url: "https://example.com",
         source: "youtube",
         meta: "Yannic Kilcher · 1d ago",
+        thumbnail: "https://picsum.photos/seed/yt1/640/360",
+      },
+      {
+        id: "y2",
+        title: "Building agents that don't fall over: lessons from prod",
+        url: "https://example.com",
+        source: "youtube",
+        meta: "AI Engineer · 3d ago",
+        thumbnail: "https://picsum.photos/seed/yt2/640/360",
       },
     ],
   },
@@ -82,7 +104,7 @@ export const mockApi: Api = {
       title: titleFrom(query),
       query,
       source,
-      layout: { x: 0, y: Infinity, w: 4, h: 4 },
+      layout: defaultLayout(source),
       status: "ready",
       items: [fakeItem(query, source)],
     };
