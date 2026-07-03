@@ -16,6 +16,7 @@ frontend/build/
 dist/
 build/
 *.egg-info/
+*.tsbuildinfo
 
 # ── Data / vector store ───────────────────────
 .chroma/
