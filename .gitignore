@@ -1,0 +1,35 @@
+# ── Dependencies ──────────────────────────────
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# ── Env / secrets ─────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Builds ────────────────────────────────────
+frontend/dist/
+frontend/build/
+dist/
+build/
+*.egg-info/
+
+# ── Data / vector store ───────────────────────
+.chroma/
+data/
+*.sqlite3
+
+# ── Editor / OS ───────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+
+# ── Private working context (not for the repo) ──
+CLAUDE.md
+
+# ── Logs ──────────────────────────────────────
+*.log
+npm-debug.log*
