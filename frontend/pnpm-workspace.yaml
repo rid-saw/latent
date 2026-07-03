@@ -1,0 +1,4 @@
+# Explicit allowlist of dependencies permitted to run install scripts.
+# pnpm blocks all others by default (supply-chain hardening).
+allowBuilds:
+  esbuild: true

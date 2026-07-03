@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-neutral-950 text-neutral-100 antialiased;
+}
+
+/* react-grid-layout tweaks */
+.react-grid-item.react-grid-placeholder {
+  @apply rounded-xl bg-neutral-700/40;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-color: rgb(115 115 115);
+}
