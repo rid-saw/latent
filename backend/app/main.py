@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import auth, blocks
 from app.config import settings
+from app.db import models  # noqa: F401 — register tables
+from app.db.database import Base, engine
+
+Base.metadata.create_all(engine)
 
 app = FastAPI(title="latent API")
 

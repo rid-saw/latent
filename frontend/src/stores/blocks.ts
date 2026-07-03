@@ -51,5 +51,20 @@ export const useBlocks = create<BlocksState>((set, get) => ({
         layouts[b.id] ? { ...b, layout: layouts[b.id] } : b,
       ),
     }));
+    persistLayouts(layouts);
   },
 }));
+
+// Debounced persistence — drag emits layout changes continuously.
+let layoutTimer: ReturnType<typeof setTimeout> | undefined;
+let pendingLayouts: Record<string, BlockLayout> = {};
+
+function persistLayouts(layouts: Record<string, BlockLayout>) {
+  pendingLayouts = { ...pendingLayouts, ...layouts };
+  clearTimeout(layoutTimer);
+  layoutTimer = setTimeout(() => {
+    const batch = pendingLayouts;
+    pendingLayouts = {};
+    api.saveLayouts(batch).catch(() => {});
+  }, 800);
+}

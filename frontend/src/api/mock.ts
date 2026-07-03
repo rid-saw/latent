@@ -116,4 +116,7 @@ export const mockApi: Api = {
   async deleteBlock() {
     await delay(100);
   },
+  async saveLayouts() {
+    // no-op in mock mode
+  },
 };

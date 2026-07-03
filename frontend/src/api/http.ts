@@ -1,5 +1,5 @@
 import type { Api } from "./client";
-import type { Block } from "@/types";
+import type { Block, BlockLayout } from "@/types";
 
 const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -19,4 +19,9 @@ export const httpApi: Api = {
   refreshBlock: (block) =>
     req<Block>(`/api/blocks/${block.id}/refresh`, { method: "POST" }),
   deleteBlock: (id) => req<void>(`/api/blocks/${id}`, { method: "DELETE" }),
+  saveLayouts: (layouts: Record<string, BlockLayout>) =>
+    req<void>("/api/blocks/layouts", {
+      method: "PATCH",
+      body: JSON.stringify(layouts),
+    }),
 };
