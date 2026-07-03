@@ -1,5 +1,6 @@
 import { Layers, Link2, Settings } from "lucide-react";
 import { Dashboard } from "@/features/dashboard/Dashboard";
+import { GoogleConnectCard } from "@/features/sources/GoogleConnectCard";
 
 export default function App() {
   return (
@@ -18,9 +19,7 @@ export default function App() {
           <NavItem icon={<Settings size={16} />} label="Settings" />
         </nav>
 
-        <div className="mt-auto rounded-lg border border-neutral-800 p-3 text-xs text-neutral-500">
-          Connect YouTube + Gmail to pull real content.
-        </div>
+        <GoogleConnectCard />
       </aside>
 
       <main className="flex flex-1 flex-col">

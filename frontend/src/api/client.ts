@@ -1,5 +1,6 @@
 import type { Block } from "@/types";
 import { mockApi } from "./mock";
+import { httpApi } from "./http";
 
 // The seam. The UI only ever talks to this interface, so swapping the mock
 // for a real HTTP client (when the backend exists) is a one-line change below.
@@ -12,5 +13,4 @@ export interface Api {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
-// TODO: implement httpApi against the FastAPI backend, then: useMock ? mockApi : httpApi
-export const api: Api = useMock ? mockApi : mockApi;
+export const api: Api = useMock ? mockApi : httpApi;
