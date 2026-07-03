@@ -11,6 +11,7 @@ import uuid
 from fastapi import HTTPException
 
 from app.integrations.arxiv.client import search_papers
+from app.integrations.gmail.client import search_messages
 from app.integrations.youtube.client import search_videos
 from app.models.schemas import Block, BlockLayout, ContentItem, SourceKind
 
@@ -54,6 +55,8 @@ async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
         return await search_videos(query)
     if source == "papers":
         return await search_papers(query)
+    if source == "gmail":
+        return await search_messages(query)
     # Other connectors land in later slices; return an honest placeholder.
     return [
         ContentItem(
