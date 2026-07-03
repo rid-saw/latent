@@ -8,7 +8,7 @@ from app.models.schemas import ContentItem
 SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
 
-async def search_videos(query: str, max_results: int = 5) -> list[ContentItem]:
+async def search_videos(query: str, max_results: int = 3) -> list[ContentItem]:
     token = await get_access_token()
     async with httpx.AsyncClient() as client:
         resp = await client.get(

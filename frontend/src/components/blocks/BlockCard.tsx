@@ -18,10 +18,9 @@ export function BlockCard({ block }: { block: Block }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
-      <header className="flex items-center gap-2 border-b border-neutral-800 px-3 py-2">
-        <button className="block-drag cursor-grab text-neutral-600 hover:text-neutral-400">
-          <GripVertical size={16} />
-        </button>
+      {/* whole header is the drag handle */}
+      <header className="block-drag flex cursor-grab items-center gap-2 border-b border-neutral-800 px-3 py-2 active:cursor-grabbing">
+        <GripVertical size={16} className="text-neutral-600" />
         <h3 className="flex-1 truncate text-sm font-medium">{block.title}</h3>
         <span
           className={cn(
