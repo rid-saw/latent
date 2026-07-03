@@ -27,8 +27,7 @@ async def refresh_block(block_id: str) -> Block:
     block = _BLOCKS.get(block_id)
     if not block:
         raise HTTPException(404, "Block not found")
-    block.items = await svc.fetch_items(block.query, block.source)
-    block.status = "ready"
+    block.items, block.status = await svc.safe_fetch(block.query, block.source)
     return block
 
 

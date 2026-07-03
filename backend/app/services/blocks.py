@@ -4,9 +4,13 @@ Mirrors frontend inference (src/api/mock.ts) and layout defaults
 (src/lib/layout.ts) — keep in sync until the backend owns persistence.
 """
 
+import logging
 import re
 import uuid
 
+from fastapi import HTTPException
+
+from app.integrations.arxiv.client import search_papers
 from app.integrations.youtube.client import search_videos
 from app.models.schemas import Block, BlockLayout, ContentItem, SourceKind
 
@@ -48,6 +52,8 @@ def default_layout(source: SourceKind) -> BlockLayout:
 async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
     if source == "youtube":
         return await search_videos(query)
+    if source == "papers":
+        return await search_papers(query)
     # Other connectors land in later slices; return an honest placeholder.
     return [
         ContentItem(
@@ -61,14 +67,26 @@ async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
     ]
 
 
+async def safe_fetch(query: str, source: SourceKind) -> tuple[list[ContentItem], str]:
+    """Fetch items; a connector failure degrades the block, never the request."""
+    try:
+        return await fetch_items(query, source), "ready"
+    except HTTPException:
+        raise  # auth errors (401) should surface as-is
+    except Exception:
+        logging.exception("fetch_items failed for source=%s", source)
+        return [], "error"
+
+
 async def create_block(query: str) -> Block:
     source = infer_source(query)
+    items, status = await safe_fetch(query, source)
     return Block(
         id=str(uuid.uuid4()),
         title=title_from(query),
         query=query,
         source=source,
         layout=default_layout(source),
-        items=await fetch_items(query, source),
-        status="ready",
+        items=items,
+        status=status,
     )
