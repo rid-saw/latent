@@ -9,6 +9,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+backend/.tokens.json
 
 # ── Builds ────────────────────────────────────
 frontend/dist/
