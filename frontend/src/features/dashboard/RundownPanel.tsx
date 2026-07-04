@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { Rundown } from "@/types";
 import { api } from "@/api/client";
 import { useSettings } from "@/stores/settings";
@@ -46,7 +46,7 @@ export function RundownPanel() {
   return (
     <div className="mx-4 mt-4 rounded-xl border border-line bg-card p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <Sparkles size={15} className="text-accent" /> The Rundown
+        The Rundown
         {rundown && (
           <span className="text-xs font-normal text-faint">
             {new Date(rundown.created_at).toLocaleString(undefined, {
