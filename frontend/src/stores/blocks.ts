@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
+import { useSettings } from "./settings";
+
+/** Bottom edge of the rundown block (it lives in the grid but not in this store). */
+function rundownBottom(): number {
+  const s = useSettings.getState();
+  return s.rundownEnabled ? s.rundownLayout.y + s.rundownLayout.h : 0;
+}
 
 interface BlocksState {
   blocks: Block[];
@@ -25,7 +32,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     // sentinels (y >= 1000) into real positions below everything else.
     let bottom = blocks
       .filter((b) => b.layout.y < 1000)
-      .reduce((m, b) => Math.max(m, b.layout.y + b.layout.h), 0);
+      .reduce((m, b) => Math.max(m, b.layout.y + b.layout.h), rundownBottom());
     const fixed: Record<string, Block["layout"]> = {};
     for (const b of blocks) {
       if (b.layout.y >= 1000) {
@@ -44,7 +51,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     // Place the new block below everything else (no compaction to do it for us).
     const bottom = get().blocks.reduce(
       (m, b) => Math.max(m, b.layout.y + b.layout.h),
-      0,
+      rundownBottom(),
     );
     const placed = { ...block, layout: { ...block.layout, x: 0, y: bottom } };
     set((s) => ({ blocks: [...s.blocks, placed], creating: false }));

@@ -21,18 +21,18 @@ Block: "{title}" (the user asked for: {query})
 Fresh items:
 {items}
 
-In 1-2 punchy sentences, tell the user what's actually worth their attention here. \
-Name the standout item if there is one; say so plainly if it's all noise. \
-Never use em dashes; use commas, periods, or semicolons instead."""
+In ONE punchy sentence, tell the user the single thing worth their attention here \
+(or that it's all noise). Never use em dashes; use commas or periods instead."""
 
 SYNTH_PROMPT = """Write "The Rundown" — a short morning-briefing paragraph for a \
 personal dashboard, from these per-block summaries:
 
 {summaries}
 
-Rules: one tight paragraph, conversational but information-dense, no bullet points, \
-no preamble, no sign-off. Lead with whatever matters most. Never use em dashes \
-(the — character); use commas, periods, or semicolons instead."""
+Rules: MAXIMUM 3 short sentences, under 55 words total. Lead with what matters \
+most; cut anything skippable entirely rather than mentioning it. Conversational, \
+information-dense, no bullets, no preamble, no sign-off. Never use em dashes \
+(the — character); use commas or periods instead."""
 
 
 class RundownState(TypedDict):

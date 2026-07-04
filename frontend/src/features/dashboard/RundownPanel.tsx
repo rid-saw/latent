@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { GripVertical, Loader2 } from "lucide-react";
 import type { Rundown } from "@/types";
 import { api } from "@/api/client";
 import { useSettings } from "@/stores/settings";
 
 const FRESH_MS = 30 * 60 * 1000; // reuse a briefing younger than 30 min
 
-/** The Rundown: auto-generated briefing across all blocks. Toggle lives in Settings. */
-export function RundownPanel() {
+/** The Rundown as a grid block: draggable, resizable, auto-generated. */
+export function RundownCard() {
   const rundownEnabled = useSettings((s) => s.rundownEnabled);
   const [rundown, setRundown] = useState<Rundown | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -41,14 +41,13 @@ export function RundownPanel() {
       .catch(() => {});
   }, [rundownEnabled]);
 
-  if (!rundownEnabled) return null;
-
   return (
-    <div className="mx-4 mt-4 rounded-xl border border-line bg-card p-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        The Rundown
-        {rundown && (
-          <span className="text-xs font-normal text-faint">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-card">
+      <header className="block-drag flex cursor-grab items-center gap-2 border-b border-line px-3 py-2 active:cursor-grabbing">
+        <GripVertical size={16} className="text-faint" />
+        <h3 className="text-sm font-medium">The Rundown</h3>
+        {rundown && !generating && (
+          <span className="text-xs text-faint">
             {new Date(rundown.created_at).toLocaleString(undefined, {
               month: "short",
               day: "numeric",
@@ -58,16 +57,17 @@ export function RundownPanel() {
           </span>
         )}
         {generating && (
-          <span className="flex items-center gap-1.5 text-xs font-normal text-faint">
-            <Loader2 size={12} className="animate-spin" /> writing today's briefing…
+          <span className="flex items-center gap-1.5 text-xs text-faint">
+            <Loader2 size={12} className="animate-spin" /> writing…
           </span>
         )}
+      </header>
+      <div className="flex-1 overflow-auto p-3">
+        {note && <p className="text-xs text-faint">{note}</p>}
+        {rundown && (
+          <p className="text-sm leading-relaxed text-soft">{rundown.text}</p>
+        )}
       </div>
-
-      {note && <p className="mt-2 text-xs text-faint">{note}</p>}
-      {rundown && (
-        <p className="mt-3 text-sm leading-relaxed text-soft">{rundown.text}</p>
-      )}
     </div>
   );
 }
