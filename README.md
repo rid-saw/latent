@@ -52,7 +52,7 @@ scripts/    dev helpers
 - [ ] Frontend + backend boilerplate (runnable skeleton)
 - [ ] Adaptable blocks dashboard UI
 - [ ] Google OAuth (YouTube + Gmail)
-- [x] Source connectors → content feeds (YouTube, arXiv, Gmail)
+- [x] Source connectors → content feeds (YouTube, arXiv, Gmail, Google News, ESPN)
 - [x] LangGraph agents: supervisor routes, critic verifies — runs on your Claude subscription
+- [x] The Rundown: agent-written briefing across all your blocks (parallel fan-out)
 - [ ] User email + auth
-- [ ] Rundown: agent-written daily summary across blocks

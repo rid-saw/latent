@@ -1,5 +1,5 @@
 import type { Api } from "./client";
-import type { Block, BlockLayout } from "@/types";
+import type { Block, BlockLayout, Rundown } from "@/types";
 
 const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -24,4 +24,6 @@ export const httpApi: Api = {
       method: "PATCH",
       body: JSON.stringify(layouts),
     }),
+  getRundown: () => req<Rundown | null>("/api/rundown"),
+  generateRundown: () => req<Rundown>("/api/rundown", { method: "POST" }),
 };

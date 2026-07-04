@@ -37,3 +37,9 @@ export interface Block {
   items: ContentItem[];
   status: BlockStatus;
 }
+
+export interface Rundown {
+  id: string;
+  text: string;
+  created_at: string;
+}

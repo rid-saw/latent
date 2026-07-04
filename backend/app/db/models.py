@@ -29,3 +29,13 @@ class BlockRow(Base):
     @classmethod
     def from_schema(cls, block: Block) -> "BlockRow":
         return cls(**block.model_dump())
+
+
+class RundownRow(Base):
+    __tablename__ = "rundowns"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    text: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )

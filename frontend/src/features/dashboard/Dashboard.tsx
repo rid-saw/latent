@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useBlocks } from "@/stores/blocks";
 import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
+import { RundownPanel } from "./RundownPanel";
 
 const Grid = WidthProvider(Responsive);
 
@@ -50,6 +51,8 @@ export function Dashboard() {
           <Plus size={16} /> Create block
         </button>
       </header>
+
+      <RundownPanel />
 
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
