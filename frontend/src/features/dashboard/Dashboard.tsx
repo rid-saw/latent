@@ -25,6 +25,15 @@ export function Dashboard() {
     minH: 2,
   }));
 
+  // Commit layout only when the gesture ends — updating state mid-drag makes
+  // the controlled grid fight the pointer (snap-backs, broken resize).
+  const commitLayout = (current: Layout[]) =>
+    applyLayouts(
+      Object.fromEntries(
+        current.map((it) => [it.i, { x: it.x, y: it.y, w: it.w, h: it.h }]),
+      ),
+    );
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
@@ -63,13 +72,8 @@ export function Dashboard() {
             cols={{ lg: 12, md: 8, sm: 4 }}
             rowHeight={80}
             draggableHandle=".block-drag"
-            onLayoutChange={(current: Layout[]) =>
-              applyLayouts(
-                Object.fromEntries(
-                  current.map((it) => [it.i, { x: it.x, y: it.y, w: it.w, h: it.h }]),
-                ),
-              )
-            }
+            onDragStop={commitLayout}
+            onResizeStop={commitLayout}
           >
             {blocks.map((b) => (
               <div key={b.id}>

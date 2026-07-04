@@ -21,6 +21,7 @@ out as adaptable content blocks.
 | Blocks    | react-grid-layout (drag/resize) + TanStack Query + zustand |
 | Backend   | FastAPI (Python) |
 | Agents    | LangGraph multi-agent system (supervisor → workers → critic) |
+| LLM       | **Your Claude subscription** via the Claude Code CLI — no API key needed |
 | Memory    | RAG over your library (vector store) |
 | Auth      | Google OAuth — one consent covers YouTube + Gmail |
 
@@ -51,6 +52,7 @@ scripts/    dev helpers
 - [ ] Frontend + backend boilerplate (runnable skeleton)
 - [ ] Adaptable blocks dashboard UI
 - [ ] Google OAuth (YouTube + Gmail)
-- [ ] Source connectors → content feeds
+- [x] Source connectors → content feeds (YouTube, arXiv, Gmail)
+- [x] LangGraph agents: supervisor routes, critic verifies — runs on your Claude subscription
 - [ ] User email + auth
-- [ ] LangGraph agents: summarize + consolidate the rundown
+- [ ] Rundown: agent-written daily summary across blocks
