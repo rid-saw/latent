@@ -11,7 +11,9 @@ import uuid
 from fastapi import HTTPException
 
 from app.integrations.arxiv.client import search_papers
+from app.integrations.espn.client import search_sports
 from app.integrations.gmail.client import search_messages
+from app.integrations.news.client import search_news
 from app.integrations.youtube.client import search_videos
 from app.models.schemas import Block, BlockLayout, ContentItem, SourceKind
 
@@ -59,6 +61,12 @@ async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
         return await search_papers(query)
     if source == "gmail":
         return await search_messages(query)
+    if source == "news":
+        return await search_news(query)
+    if source == "sports":
+        return await search_sports(query)
+    if source == "web":
+        return await search_news(query)  # best keyless proxy for generic queries
     # Other connectors land in later slices; return an honest placeholder.
     return [
         ContentItem(

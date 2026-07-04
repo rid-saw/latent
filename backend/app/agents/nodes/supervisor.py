@@ -12,8 +12,8 @@ want to keep up with; decide which source serves it best and produce focused sea
 terms for that source's API.
 
 Sources: youtube (videos), papers (arXiv research), gmail (the user's own inbox), \
-news, sports, web.
-Only youtube, papers and gmail have live connectors; pick the closest match anyway.
+news (Google News, any topic), sports (ESPN leagues: NBA/NFL/MLB/NHL/soccer/F1/golf), \
+web (generic — resolved via news search).
 
 User request: {query}"""
 

@@ -12,7 +12,9 @@ from app.agents.nodes.critic import critic_node
 from app.agents.nodes.supervisor import supervisor_node
 from app.agents.state import BlockAgentState
 from app.integrations.arxiv.client import search_papers
+from app.integrations.espn.client import search_sports
 from app.integrations.gmail.client import search_messages
+from app.integrations.news.client import search_news
 from app.integrations.youtube.client import search_videos
 
 MAX_ROUNDS = 2
@@ -21,6 +23,9 @@ _CONNECTORS = {
     "youtube": search_videos,
     "papers": search_papers,
     "gmail": search_messages,
+    "news": search_news,
+    "sports": search_sports,
+    "web": search_news,
 }
 
 
