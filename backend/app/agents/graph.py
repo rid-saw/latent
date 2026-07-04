@@ -1,0 +1,53 @@
+"""Block agent: supervisor -> fetch -> critic, with a bounded reflection loop.
+
+  START -> supervisor -> fetch -> critic -> (approved or 2 rounds) -> END
+                           ^________________| (refined search terms)
+"""
+
+from functools import lru_cache
+
+from langgraph.graph import END, START, StateGraph
+
+from app.agents.nodes.critic import critic_node
+from app.agents.nodes.supervisor import supervisor_node
+from app.agents.state import BlockAgentState
+from app.integrations.arxiv.client import search_papers
+from app.integrations.gmail.client import search_messages
+from app.integrations.youtube.client import search_videos
+
+MAX_ROUNDS = 2
+
+_CONNECTORS = {
+    "youtube": search_videos,
+    "papers": search_papers,
+    "gmail": search_messages,
+}
+
+
+async def fetch_node(state: BlockAgentState) -> dict:
+    connector = _CONNECTORS.get(state["source"])
+    items = await connector(state["search_terms"]) if connector else []
+    return {"items": items, "iterations": state.get("iterations", 0) + 1}
+
+
+def _after_critic(state: BlockAgentState) -> str:
+    if state.get("approved") or state.get("iterations", 0) >= MAX_ROUNDS:
+        return "done"
+    return "refine"
+
+
+@lru_cache
+def get_graph():
+    g = StateGraph(BlockAgentState)
+    g.add_node("supervisor", supervisor_node)
+    g.add_node("fetch", fetch_node)
+    g.add_node("critic", critic_node)
+    g.add_edge(START, "supervisor")
+    g.add_edge("supervisor", "fetch")
+    g.add_edge("fetch", "critic")
+    g.add_conditional_edges("critic", _after_critic, {"refine": "fetch", "done": END})
+    return g.compile()
+
+
+async def run_block_agent(query: str) -> BlockAgentState:
+    return await get_graph().ainvoke({"query": query, "iterations": 0})

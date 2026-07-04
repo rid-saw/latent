@@ -1,0 +1,13 @@
+from typing import TypedDict
+
+from app.models.schemas import ContentItem, SourceKind
+
+
+class BlockAgentState(TypedDict, total=False):
+    query: str            # the user's natural-language block prompt
+    source: SourceKind    # supervisor's routing decision
+    search_terms: str     # supervisor/critic-refined terms for the connector
+    title: str            # short block title
+    items: list[ContentItem]
+    approved: bool        # critic verdict
+    iterations: int       # fetch rounds completed (reflection loop guard)

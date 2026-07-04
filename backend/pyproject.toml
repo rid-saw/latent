@@ -9,6 +9,8 @@ dependencies = [
     "pydantic-settings>=2.6",
     "httpx>=0.28",
     "sqlalchemy>=2.0.51",
+    "langgraph>=1.2.7",
+    "langchain-anthropic>=1.4.8",
 ]
 
 [tool.uv]

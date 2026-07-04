@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
 
+    # LLM agent layer. Backend "auto" prefers the user's Claude subscription
+    # (Claude Code CLI), then ANTHROPIC_API_KEY, then regex fallback.
+    llm_backend: str = "auto"  # auto | claude-code | api | off
+    anthropic_api_key: str = ""
+    agent_model: str = "claude-opus-4-8"  # api backend only
+
     # Dev-only token store (single user). Replaced by DB in the auth phase.
     token_store_path: Path = BACKEND_DIR / ".tokens.json"
 

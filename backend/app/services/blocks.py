@@ -47,7 +47,9 @@ def title_from(query: str) -> str:
 
 def default_layout(source: SourceKind) -> BlockLayout:
     w, h = _SIZES[source]
-    return BlockLayout(x=0, y=0, w=w, h=h)
+    # Large y -> react-grid-layout compacts the new block to the bottom
+    # instead of shoving existing blocks down from the top.
+    return BlockLayout(x=0, y=9999, w=w, h=h)
 
 
 async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
@@ -82,6 +84,11 @@ async def safe_fetch(query: str, source: SourceKind) -> tuple[list[ContentItem],
 
 
 async def create_block(query: str) -> Block:
+    from app.agents.llm import agents_enabled  # lazy: avoid import cycle
+
+    if agents_enabled():
+        return await _create_block_agentic(query)
+
     source = infer_source(query)
     items, status = await safe_fetch(query, source)
     return Block(
@@ -93,3 +100,40 @@ async def create_block(query: str) -> Block:
         items=items,
         status=status,
     )
+
+
+async def _create_block_agentic(query: str) -> Block:
+    """LangGraph path: supervisor routes, connector fetches, critic verifies."""
+    from app.agents.graph import run_block_agent
+
+    try:
+        state = await run_block_agent(query)
+        source: SourceKind = state["source"]
+        items = state.get("items") or []
+        # Connectorless sources still get an honest stub.
+        if not items and source not in ("youtube", "papers", "gmail"):
+            items = await fetch_items(query, source)
+        return Block(
+            id=str(uuid.uuid4()),
+            title=state.get("title") or title_from(query),
+            query=query,
+            source=source,
+            layout=default_layout(source),
+            items=items,
+            status="ready",
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("agent path failed; falling back to regex inference")
+        source = infer_source(query)
+        items, status = await safe_fetch(query, source)
+        return Block(
+            id=str(uuid.uuid4()),
+            title=title_from(query),
+            query=query,
+            source=source,
+            layout=default_layout(source),
+            items=items,
+            status=status,
+        )
