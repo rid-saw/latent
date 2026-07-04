@@ -13,7 +13,7 @@ from app.db.models import BlockRow, RundownRow
 
 router = APIRouter(prefix="/api/rundown", tags=["rundown"])
 
-MAX_ITEMS_PER_BLOCK = 5
+MAX_ITEMS_PER_BLOCK = 3
 
 
 class Rundown(BaseModel):

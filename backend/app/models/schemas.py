@@ -33,7 +33,7 @@ class Block(BaseModel):
     layout: BlockLayout
     items: list[ContentItem]
     status: BlockStatus
-    max_items: int = 5
+    max_items: int = 3
 
 
 class CreateBlockRequest(BaseModel):

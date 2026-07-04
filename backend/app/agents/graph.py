@@ -32,7 +32,7 @@ _CONNECTORS = {
 async def fetch_node(state: BlockAgentState) -> dict:
     connector = _CONNECTORS.get(state["source"])
     items = (
-        await connector(state["search_terms"], max_results=state.get("max_items", 5))
+        await connector(state["search_terms"], max_results=state.get("max_items", 3))
         if connector
         else []
     )

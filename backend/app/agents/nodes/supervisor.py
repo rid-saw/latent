@@ -27,7 +27,7 @@ class Plan(BaseModel):
         ge=1,
         le=10,
         description="How many items to show: the number the user asked for if they "
-        "named one, else 3 for papers and 5 for everything else",
+        "named one, else 3",
     )
 
 

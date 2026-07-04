@@ -109,7 +109,7 @@ export const mockApi: Api = {
       layout: defaultLayout(source),
       status: "ready",
       items: [fakeItem(query, source)],
-      max_items: source === "papers" ? 3 : 5,
+      max_items: 3,
     };
   },
   async refreshBlock(block) {

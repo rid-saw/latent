@@ -54,11 +54,11 @@ def default_layout(source: SourceKind) -> BlockLayout:
     return BlockLayout(x=0, y=9999, w=w, h=h)
 
 
-def default_max_items(source: SourceKind) -> int:
-    return 3 if source == "papers" else 5
+def default_max_items(source: SourceKind) -> int:  # noqa: ARG001 — uniform for now
+    return 3
 
 
-async def fetch_items(query: str, source: SourceKind, max_items: int = 5) -> list[ContentItem]:
+async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> list[ContentItem]:
     if source == "youtube":
         return await search_videos(query, max_results=max_items)
     if source == "papers":
@@ -85,7 +85,7 @@ async def fetch_items(query: str, source: SourceKind, max_items: int = 5) -> lis
 
 
 async def safe_fetch(
-    query: str, source: SourceKind, max_items: int = 5
+    query: str, source: SourceKind, max_items: int = 3
 ) -> tuple[list[ContentItem], str]:
     """Fetch items; a connector failure degrades the block, never the request."""
     try:
