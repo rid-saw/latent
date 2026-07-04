@@ -1,12 +1,8 @@
-import asyncio
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import auth, blocks, rundown
 from app.config import settings
-from app.services.startup import refresh_all_and_brief
 from sqlalchemy import text
 
 from app.db import models  # noqa: F401 — register tables
@@ -21,15 +17,7 @@ with engine.connect() as _conn:
         _conn.execute(text("ALTER TABLE blocks ADD COLUMN max_items INTEGER NOT NULL DEFAULT 5"))
         _conn.commit()
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    # Fresh content in every block + a new rundown, once per backend start.
-    task = asyncio.create_task(refresh_all_and_brief())
-    yield
-    task.cancel()
-
-
-app = FastAPI(title="latent API", lifespan=lifespan)
+app = FastAPI(title="latent API")
 
 app.add_middleware(
     CORSMiddleware,
