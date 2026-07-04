@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
-import { findSpot } from "@/lib/layout";
+import { compactUp, findSpot } from "@/lib/layout";
 
 function occupiedLayouts(blocks: Block[]): BlockLayout[] {
   return blocks.filter((b) => b.layout.y < 1000).map((b) => b.layout);
@@ -53,7 +53,10 @@ export const useBlocks = create<BlocksState>((set, get) => ({
 
   async remove(id) {
     await api.deleteBlock(id);
-    set((s) => ({ blocks: s.blocks.filter((b) => b.id !== id) }));
+    // Gravity pass: neighbors slide up into the vacated space.
+    const { blocks, changed } = compactUp(get().blocks.filter((b) => b.id !== id));
+    set({ blocks });
+    if (Object.keys(changed).length) persistLayouts(changed);
   },
 
   async refresh(id) {
