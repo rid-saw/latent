@@ -21,7 +21,8 @@ Fresh items:
 {items}
 
 In 1-2 punchy sentences, tell the user what's actually worth their attention here. \
-Name the standout item if there is one; say so plainly if it's all noise."""
+Name the standout item if there is one; say so plainly if it's all noise. \
+Never use em dashes; use commas, periods, or semicolons instead."""
 
 SYNTH_PROMPT = """Write "The Rundown" — a short morning-briefing paragraph for a \
 personal dashboard, from these per-block summaries:
@@ -29,7 +30,8 @@ personal dashboard, from these per-block summaries:
 {summaries}
 
 Rules: one tight paragraph, conversational but information-dense, no bullet points, \
-no preamble, no sign-off. Lead with whatever matters most."""
+no preamble, no sign-off. Lead with whatever matters most. Never use em dashes \
+(the — character); use commas, periods, or semicolons instead."""
 
 
 class RundownState(TypedDict):
