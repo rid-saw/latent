@@ -36,6 +36,7 @@ export interface Block {
   layout: BlockLayout;
   items: ContentItem[];
   status: BlockStatus;
+  max_items: number; // how many items to show (user can specify in the prompt)
 }
 
 export interface Rundown {

@@ -40,8 +40,9 @@ const seed: Block[] = [
     title: "Recent papers on AI + medicine",
     query: "recent high-impact papers on AI and medicine",
     source: "papers",
-    layout: { x: 0, y: 0, w: 4, h: 4 },
+    layout: { x: 0, y: 0, w: 6, h: 7 },
     status: "ready",
+    max_items: 3,
     items: [
       {
         id: "p1",
@@ -68,8 +69,9 @@ const seed: Block[] = [
     title: "AI research channels",
     query: "new videos from AI research youtube channels",
     source: "youtube",
-    layout: { x: 4, y: 0, w: 4, h: 6 },
+    layout: { x: 6, y: 0, w: 4, h: 6 },
     status: "ready",
+    max_items: 3,
     items: [
       {
         id: "y1",
@@ -107,6 +109,7 @@ export const mockApi: Api = {
       layout: defaultLayout(source),
       status: "ready",
       items: [fakeItem(query, source)],
+      max_items: source === "papers" ? 3 : 5,
     };
   },
   async refreshBlock(block) {

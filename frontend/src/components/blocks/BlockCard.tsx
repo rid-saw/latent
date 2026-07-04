@@ -53,6 +53,8 @@ export function BlockCard({ block }: { block: Block }) {
           block.items.map((item) =>
             item.source === "youtube" ? (
               <VideoCard key={item.id} item={item} />
+            ) : item.source === "papers" ? (
+              <PaperCard key={item.id} item={item} />
             ) : (
               <LinkPreviewCard key={item.id} item={item} />
             ),
@@ -84,6 +86,43 @@ function VideoCard({ item }: { item: ContentItem }) {
         <p className="line-clamp-2 text-sm leading-snug">{item.title}</p>
         {item.meta && (
           <p className="mt-0.5 text-xs text-faint">{item.meta}</p>
+        )}
+      </div>
+    </a>
+  );
+}
+
+/** Papers: large visual card with a live snapshot of the publication page. */
+function PaperCard({ item }: { item: ContentItem }) {
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+      className="block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
+    >
+      {item.thumbnail && (
+        <img
+          src={item.thumbnail}
+          alt=""
+          loading="lazy"
+          onError={(e) => (e.currentTarget.style.display = "none")}
+          className="aspect-[2/1] w-full border-b border-line object-cover object-top"
+        />
+      )}
+      <div className="p-3">
+        {item.meta && (
+          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-accent">
+            {item.meta}
+          </p>
+        )}
+        <p className="mt-1 line-clamp-2 text-base font-medium leading-snug">
+          {item.title}
+        </p>
+        {item.summary && (
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-soft">
+            {item.summary}
+          </p>
         )}
       </div>
     </a>

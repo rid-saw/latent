@@ -5,7 +5,7 @@ import type { BlockLayout, SourceKind } from "@/types";
 // y: Infinity → react-grid-layout appends at the bottom.
 const sizes: Record<SourceKind, { w: number; h: number }> = {
   youtube: { w: 4, h: 6 },
-  papers: { w: 4, h: 4 },
+  papers: { w: 6, h: 7 },
   news: { w: 4, h: 4 },
   gmail: { w: 3, h: 4 },
   sports: { w: 3, h: 3 },
