@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { GripVertical, RefreshCw, X } from "lucide-react";
 import type { Block, ContentItem, SourceKind } from "@/types";
 import { useBlocks } from "@/stores/blocks";
@@ -92,8 +93,34 @@ function VideoCard({ item }: { item: ContentItem }) {
   );
 }
 
-/** Papers: large visual card with a live snapshot of the publication page. */
+/** Deterministic gradient cover for papers whose publisher has no usable image. */
+function PaperCover({ item }: { item: ContentItem }) {
+  const venue = (item.meta || "Paper").split("·")[0].trim();
+  let hash = 0;
+  for (const ch of venue + item.title) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+  const monogram = venue
+    .split(/\s+/)
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+  return (
+    <div
+      className="flex aspect-[2/1] w-full items-center justify-center border-b border-line"
+      style={{
+        background: `linear-gradient(135deg, hsl(${hash} 30% 68%), hsl(${(hash + 50) % 360} 28% 42%))`,
+      }}
+    >
+      <span className="font-serif text-4xl font-semibold tracking-widest text-white/75">
+        {monogram}
+      </span>
+    </div>
+  );
+}
+
+/** Papers: large visual card — publisher og:image, or a generated cover. */
 function PaperCard({ item }: { item: ContentItem }) {
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <a
       href={item.url}
@@ -101,14 +128,16 @@ function PaperCard({ item }: { item: ContentItem }) {
       rel="noreferrer"
       className="block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
     >
-      {item.thumbnail && (
+      {item.thumbnail && !imgFailed ? (
         <img
           src={item.thumbnail}
           alt=""
           loading="lazy"
-          onError={(e) => (e.currentTarget.style.display = "none")}
+          onError={() => setImgFailed(true)}
           className="aspect-[2/1] w-full border-b border-line object-cover object-top"
         />
+      ) : (
+        <PaperCover item={item} />
       )}
       <div className="p-3">
         {item.meta && (
