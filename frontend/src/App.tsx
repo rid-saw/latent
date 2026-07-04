@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Layers, Settings } from "lucide-react";
+import { ChevronLeft, Layers, Settings } from "lucide-react";
 import { Dashboard } from "@/features/dashboard/Dashboard";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { GoogleConnectCard } from "@/features/sources/GoogleConnectCard";
@@ -22,77 +22,60 @@ export default function App() {
 
   return (
     <div className="flex h-full">
-      {sidebarOpen ? (
-        <aside className="flex w-56 flex-col border-r border-line bg-surface/60 p-4">
-          <div className="mb-6 flex items-center gap-2 px-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm font-bold text-bg">
-              l
-            </div>
-            <span className="font-semibold">latent</span>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="ml-auto rounded-md p-1 text-faint hover:bg-surface hover:text-ink"
-              title="Collapse sidebar"
-            >
-              <ChevronLeft size={16} />
-            </button>
-          </div>
-
-          <nav className="space-y-1 text-sm">
-            {nav.map((n) => (
-              <button
-                key={n.key}
-                onClick={() => setView(n.key)}
-                className={
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left " +
-                  (view === n.key
-                    ? "bg-surface text-ink"
-                    : "text-soft hover:bg-surface/70 hover:text-ink")
-                }
-              >
-                {n.icon}
-                {n.label}
-              </button>
-            ))}
-          </nav>
-
-          <GoogleConnectCard />
-        </aside>
-      ) : (
-        <aside className="flex w-12 flex-col items-center border-r border-line bg-surface/60 py-4">
+      <aside
+        className={
+          "flex shrink-0 flex-col overflow-hidden border-r border-line bg-surface/60 transition-all duration-300 ease-in-out " +
+          (sidebarOpen ? "w-56 p-4" : "w-14 p-2")
+        }
+      >
+        <div className={"mb-6 flex items-center gap-2 " + (sidebarOpen ? "px-2" : "flex-col gap-3")}>
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="mb-6 flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm font-bold text-bg"
-            title="Expand sidebar"
+            onClick={() => !sidebarOpen && setSidebarOpen(true)}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink text-sm font-bold text-bg"
+            title={sidebarOpen ? undefined : "Expand sidebar"}
           >
             l
           </button>
-          <nav className="flex flex-col items-center gap-1">
-            {nav.map((n) => (
-              <button
-                key={n.key}
-                onClick={() => setView(n.key)}
-                title={n.label}
-                className={
-                  "rounded-lg p-2 " +
-                  (view === n.key
-                    ? "bg-surface text-ink"
-                    : "text-soft hover:bg-surface/70 hover:text-ink")
-                }
-              >
-                {n.icon}
-              </button>
-            ))}
-          </nav>
+          {sidebarOpen && <span className="whitespace-nowrap font-semibold">latent</span>}
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="mt-auto rounded-md p-1.5 text-faint hover:bg-surface hover:text-ink"
-            title="Expand sidebar"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={
+              "rounded-md p-1 text-faint hover:bg-surface hover:text-ink " +
+              (sidebarOpen ? "ml-auto" : "")
+            }
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            <ChevronRight size={16} />
+            <ChevronLeft
+              size={16}
+              className={
+                "transition-transform duration-300 " + (sidebarOpen ? "" : "rotate-180")
+              }
+            />
           </button>
-        </aside>
-      )}
+        </div>
+
+        <nav className={"space-y-1 text-sm " + (sidebarOpen ? "" : "flex flex-col items-center")}>
+          {nav.map((n) => (
+            <button
+              key={n.key}
+              onClick={() => setView(n.key)}
+              title={sidebarOpen ? undefined : n.label}
+              className={
+                "flex items-center gap-3 rounded-lg py-2 " +
+                (sidebarOpen ? "w-full px-3 text-left " : "justify-center p-2 ") +
+                (view === n.key
+                  ? "bg-surface text-ink"
+                  : "text-soft hover:bg-surface/70 hover:text-ink")
+              }
+            >
+              {n.icon}
+              {sidebarOpen && <span className="whitespace-nowrap">{n.label}</span>}
+            </button>
+          ))}
+        </nav>
+
+        {sidebarOpen && <GoogleConnectCard />}
+      </aside>
 
       <main className="flex flex-1 flex-col overflow-hidden">
         {view === "dashboard" ? <Dashboard /> : <SettingsPage />}
