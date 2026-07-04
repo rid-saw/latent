@@ -43,8 +43,11 @@ async def _via_claude_code(prompt: str, schema: type[BaseModel]) -> BaseModel:
         "Respond with ONLY a JSON object matching this schema — no prose, no code fences:\n"
         f"{json.dumps(schema.model_json_schema())}"
     )
+    args = [claude_cli(), "-p", full_prompt, "--output-format", "json"]
+    if settings.llm_model:
+        args += ["--model", settings.llm_model]
     proc = await asyncio.create_subprocess_exec(
-        claude_cli(), "-p", full_prompt, "--output-format", "json",
+        *args,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )

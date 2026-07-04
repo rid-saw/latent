@@ -20,8 +20,11 @@ class Settings(BaseSettings):
     # LLM agent layer. Backend "auto" prefers the user's Claude subscription
     # (Claude Code CLI), then ANTHROPIC_API_KEY, then regex fallback.
     llm_backend: str = "auto"  # auto | claude-code | api | off
+    # Routing/critique/summaries are lightweight — a fast model keeps blocks
+    # snappy and burns less of the user's usage window. Empty = CLI default.
+    llm_model: str = "haiku"
     anthropic_api_key: str = ""
-    agent_model: str = "claude-opus-4-8"  # api backend only
+    agent_model: str = "claude-haiku-4-5"  # api backend only
 
     # Dev-only token store (single user). Replaced by DB in the auth phase.
     token_store_path: Path = BACKEND_DIR / ".tokens.json"
