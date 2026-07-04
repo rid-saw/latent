@@ -1,22 +1,29 @@
 import { useEffect, useState } from "react";
-import { Responsive, WidthProvider, type Layout } from "react-grid-layout";
+import {
+  ResponsiveGridLayout,
+  noCompactor,
+  useContainerWidth,
+  type LayoutItem,
+} from "react-grid-layout";
 import { Plus } from "lucide-react";
 import { useBlocks } from "@/stores/blocks";
 import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { RundownPanel } from "./RundownPanel";
 
-const Grid = WidthProvider(Responsive);
+// Free-form: no auto-compaction, blocks stay where dropped, no overlap.
+const freeform = { ...noCompactor, preventCollision: true };
 
 export function Dashboard() {
   const { blocks, loading, load, applyLayouts } = useBlocks();
   const [showCreate, setShowCreate] = useState(false);
+  const { width, containerRef, mounted } = useContainerWidth();
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const layout: Layout[] = blocks.map((b) => ({
+  const layout: LayoutItem[] = blocks.map((b) => ({
     i: b.id,
     x: b.layout.x,
     y: b.layout.y,
@@ -28,7 +35,7 @@ export function Dashboard() {
 
   // Commit layout only when the gesture ends — updating state mid-drag makes
   // the controlled grid fight the pointer (snap-backs, broken resize).
-  const commitLayout = (current: Layout[]) =>
+  const commitLayout = (current: readonly LayoutItem[]) =>
     applyLayouts(
       Object.fromEntries(
         current.map((it) => [it.i, { x: it.x, y: it.y, w: it.w, h: it.h }]),
@@ -54,7 +61,7 @@ export function Dashboard() {
 
       <RundownPanel />
 
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={containerRef} className="flex-1 overflow-auto p-4">
         {loading ? (
           <p className="p-6 text-sm text-faint">Loading…</p>
         ) : blocks.length === 0 ? (
@@ -68,24 +75,26 @@ export function Dashboard() {
             </button>
           </div>
         ) : (
-          <Grid
-            className="layout"
-            layouts={{ lg: layout, md: layout, sm: layout }}
-            breakpoints={{ lg: 1200, md: 800, sm: 0 }}
-            cols={{ lg: 12, md: 8, sm: 4 }}
-            rowHeight={80}
-            draggableHandle=".block-drag"
-            compactType={null}
-            preventCollision
-            onDragStop={commitLayout}
-            onResizeStop={commitLayout}
-          >
-            {blocks.map((b) => (
-              <div key={b.id}>
-                <BlockCard block={b} />
-              </div>
-            ))}
-          </Grid>
+          mounted && (
+            <ResponsiveGridLayout
+              className="layout"
+              width={width}
+              layouts={{ lg: layout, md: layout, sm: layout }}
+              breakpoints={{ lg: 1200, md: 800, sm: 0 }}
+              cols={{ lg: 12, md: 8, sm: 4 }}
+              rowHeight={80}
+              dragConfig={{ handle: ".block-drag" }}
+              compactor={freeform}
+              onDragStop={commitLayout}
+              onResizeStop={commitLayout}
+            >
+              {blocks.map((b) => (
+                <div key={b.id}>
+                  <BlockCard block={b} />
+                </div>
+              ))}
+            </ResponsiveGridLayout>
+          )
         )}
       </div>
 
