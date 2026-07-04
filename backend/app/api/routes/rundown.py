@@ -7,13 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.agents.llm import agents_enabled
-from app.agents.rundown import run_rundown
+from app.agents.rundown import payload_from_rows, run_rundown
 from app.db.database import get_db
 from app.db.models import BlockRow, RundownRow
 
 router = APIRouter(prefix="/api/rundown", tags=["rundown"])
-
-MAX_ITEMS_PER_BLOCK = 3
 
 
 class Rundown(BaseModel):
@@ -39,19 +37,7 @@ async def generate(db: Session = Depends(get_db)) -> Rundown:
     if not agents_enabled():
         raise HTTPException(400, "No LLM backend — install Claude Code or set ANTHROPIC_API_KEY")
 
-    rows = db.query(BlockRow).all()
-    blocks = [
-        {
-            "title": r.title,
-            "query": r.query,
-            "items": [
-                " — ".join(p for p in (it.get("title"), it.get("meta"), (it.get("summary") or "")[:120]) if p)
-                for it in (r.items or [])[:MAX_ITEMS_PER_BLOCK]
-            ],
-        }
-        for r in rows
-        if r.items
-    ]
+    blocks = payload_from_rows(db.query(BlockRow).all())
     if not blocks:
         raise HTTPException(400, "No blocks with content — create some blocks first")
 

@@ -32,7 +32,7 @@ export function SettingsPage() {
         />
         <Row
           title="The Rundown"
-          description="Auto-generate the briefing when the dashboard loads."
+          description="Show the briefing written at startup across all your blocks."
           control={<Switch checked={rundownEnabled} onChange={setRundownEnabled} />}
           icon={<Sparkles size={15} className="text-accent" />}
         />

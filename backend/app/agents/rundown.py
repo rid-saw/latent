@@ -84,6 +84,29 @@ def get_rundown_graph():
     return g.compile()
 
 
+MAX_ITEMS_PER_BLOCK = 3
+
+
+def payload_from_rows(rows) -> list[dict]:
+    """DB block rows -> the per-block payload the rundown graph consumes."""
+    return [
+        {
+            "title": r.title,
+            "query": r.query,
+            "items": [
+                " — ".join(
+                    p
+                    for p in (it.get("title"), it.get("meta"), (it.get("summary") or "")[:120])
+                    if p
+                )
+                for it in (r.items or [])[:MAX_ITEMS_PER_BLOCK]
+            ],
+        }
+        for r in rows
+        if r.items
+    ]
+
+
 def _strip_em_dashes(text: str) -> str:
     """Prompt bans aren't reliable; enforce deterministically."""
     text = re.sub(r"\s*[—–]\s*", ", ", text)

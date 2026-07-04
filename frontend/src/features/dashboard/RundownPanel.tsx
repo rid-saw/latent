@@ -1,72 +1,43 @@
-import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Rundown } from "@/types";
 import { api } from "@/api/client";
 import { useSettings } from "@/stores/settings";
 
-const FRESH_MS = 30 * 60 * 1000; // reuse a briefing younger than 30 min
-
-/** The Rundown: fixed strip above the grid. Hidden entirely when disabled. */
+/** The Rundown: written once at backend startup; this panel just displays it.
+ * A light poll picks it up if the page loaded while it was still being written. */
 export function RundownPanel() {
   const rundownEnabled = useSettings((s) => s.rundownEnabled);
   const [rundown, setRundown] = useState<Rundown | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
-  const autoRan = useRef(false);
 
   useEffect(() => {
-    if (!rundownEnabled || autoRan.current) return;
-    autoRan.current = true;
-    api
-      .getRundown()
-      .then(async (latest) => {
-        setRundown(latest);
-        const fresh =
-          latest && Date.now() - new Date(latest.created_at).getTime() < FRESH_MS;
-        if (fresh) return;
-        setGenerating(true);
-        try {
-          setRundown(await api.generateRundown());
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : "";
-          setNote(
-            msg.includes("No blocks")
-              ? "Create a few blocks and the Rundown will write itself."
-              : "Couldn't generate a briefing right now.",
-          );
-        } finally {
-          setGenerating(false);
-        }
-      })
-      .catch(() => {});
+    if (!rundownEnabled) return;
+    let stop = false;
+    const fetchLatest = () =>
+      api.getRundown().then((r) => !stop && setRundown(r)).catch(() => {});
+    fetchLatest();
+    const timer = setInterval(fetchLatest, 30_000);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
   }, [rundownEnabled]);
 
-  if (!rundownEnabled) return null;
+  if (!rundownEnabled || !rundown) return null;
 
   return (
     <div className="mx-4 mt-4 rounded-xl border border-line bg-card p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         The Rundown
-        {rundown && !generating && (
-          <span className="text-xs font-normal text-faint">
-            {new Date(rundown.created_at).toLocaleString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </span>
-        )}
-        {generating && (
-          <span className="flex items-center gap-1.5 text-xs font-normal text-faint">
-            <Loader2 size={12} className="animate-spin" /> writing…
-          </span>
-        )}
+        <span className="text-xs font-normal text-faint">
+          {new Date(rundown.created_at).toLocaleString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </span>
       </div>
-      {note && <p className="mt-2 text-xs text-faint">{note}</p>}
-      {rundown && (
-        <p className="mt-2 text-sm leading-relaxed text-soft">{rundown.text}</p>
-      )}
+      <p className="mt-2 text-sm leading-relaxed text-soft">{rundown.text}</p>
     </div>
   );
 }
