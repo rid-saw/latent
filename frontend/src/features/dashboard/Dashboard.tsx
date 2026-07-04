@@ -7,6 +7,7 @@ import {
 } from "react-grid-layout";
 import { Plus } from "lucide-react";
 import type { BlockLayout } from "@/types";
+import { intersects } from "@/lib/layout";
 import { useBlocks } from "@/stores/blocks";
 import { useSettings } from "@/stores/settings";
 import { BlockCard } from "@/components/blocks/BlockCard";
@@ -17,9 +18,6 @@ import { RundownCard } from "./RundownPanel";
 const freeform = { ...noCompactor, preventCollision: true };
 
 const RUNDOWN_ID = "__rundown__";
-
-const intersects = (a: BlockLayout, b: BlockLayout) =>
-  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 export function Dashboard() {
   const { blocks, loading, load, applyLayouts } = useBlocks();

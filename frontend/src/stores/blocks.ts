@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
+import { findSpot } from "@/lib/layout";
 import { useSettings } from "./settings";
 
-/** Bottom edge of the rundown block (it lives in the grid but not in this store). */
-function rundownBottom(): number {
+/** Everything already occupying grid space (incl. the rundown block). */
+function occupiedLayouts(blocks: Block[]): BlockLayout[] {
   const s = useSettings.getState();
-  return s.rundownEnabled ? s.rundownLayout.y + s.rundownLayout.h : 0;
+  const occupied = blocks.filter((b) => b.layout.y < 1000).map((b) => b.layout);
+  if (s.rundownEnabled) occupied.push(s.rundownLayout);
+  return occupied;
 }
 
 interface BlocksState {
@@ -29,15 +32,13 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     set({ loading: true });
     const blocks = await api.listBlocks();
     // Free-form grid (no compaction): normalize legacy "place at bottom"
-    // sentinels (y >= 1000) into real positions below everything else.
-    let bottom = blocks
-      .filter((b) => b.layout.y < 1000)
-      .reduce((m, b) => Math.max(m, b.layout.y + b.layout.h), rundownBottom());
+    // sentinels (y >= 1000) into real reading-order positions.
+    const occupied = occupiedLayouts(blocks);
     const fixed: Record<string, Block["layout"]> = {};
     for (const b of blocks) {
       if (b.layout.y >= 1000) {
-        b.layout = { ...b.layout, x: 0, y: bottom };
-        bottom += b.layout.h;
+        b.layout = { ...b.layout, ...findSpot(b.layout.w, b.layout.h, occupied) };
+        occupied.push(b.layout);
         fixed[b.id] = b.layout;
       }
     }
@@ -48,12 +49,9 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   async create(query) {
     set({ creating: true });
     const block = await api.createBlock(query);
-    // Place the new block below everything else (no compaction to do it for us).
-    const bottom = get().blocks.reduce(
-      (m, b) => Math.max(m, b.layout.y + b.layout.h),
-      rundownBottom(),
-    );
-    const placed = { ...block, layout: { ...block.layout, x: 0, y: bottom } };
+    // Reading order: first free spot left->right, wrapping to the next row.
+    const spot = findSpot(block.layout.w, block.layout.h, occupiedLayouts(get().blocks));
+    const placed = { ...block, layout: { ...block.layout, ...spot } };
     set((s) => ({ blocks: [...s.blocks, placed], creating: false }));
     persistLayouts({ [placed.id]: placed.layout });
   },

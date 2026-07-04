@@ -15,3 +15,21 @@ const sizes: Record<SourceKind, { w: number; h: number }> = {
 export function defaultLayout(source: SourceKind): BlockLayout {
   return { x: 0, y: Infinity, ...sizes[source] };
 }
+
+export const intersects = (a: BlockLayout, b: BlockLayout) =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** First free spot scanning like reading order: left→right, then next row. */
+export function findSpot(
+  w: number,
+  h: number,
+  occupied: BlockLayout[],
+  cols = 12,
+): { x: number; y: number } {
+  for (let y = 0; ; y++) {
+    for (let x = 0; x <= cols - w; x++) {
+      const cand = { x, y, w, h };
+      if (!occupied.some((o) => intersects(cand, o))) return { x, y };
+    }
+  }
+}
