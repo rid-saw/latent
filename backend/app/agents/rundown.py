@@ -5,6 +5,7 @@ synthesizer writes one short briefing across everything.
 """
 
 import operator
+import re
 from functools import lru_cache
 from typing import Annotated, TypedDict
 
@@ -83,6 +84,12 @@ def get_rundown_graph():
     return g.compile()
 
 
+def _strip_em_dashes(text: str) -> str:
+    """Prompt bans aren't reliable; enforce deterministically."""
+    text = re.sub(r"\s*[—–]\s*", ", ", text)
+    return re.sub(r",\s*,", ",", text)
+
+
 async def run_rundown(blocks: list[dict]) -> str:
     state = await get_rundown_graph().ainvoke({"blocks": blocks, "summaries": []})
-    return state["briefing"]
+    return _strip_em_dashes(state["briefing"])
