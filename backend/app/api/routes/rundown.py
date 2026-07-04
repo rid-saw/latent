@@ -23,7 +23,9 @@ class Rundown(BaseModel):
 
 
 def _to_schema(row: RundownRow) -> Rundown:
-    return Rundown(id=row.id, text=row.text, created_at=row.created_at.isoformat())
+    # SQLite strips tzinfo; timestamps are UTC — say so, or JS parses as local.
+    iso = row.created_at.isoformat()
+    return Rundown(id=row.id, text=row.text, created_at=iso if "+" in iso else iso + "Z")
 
 
 @router.get("")

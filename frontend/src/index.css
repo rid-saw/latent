@@ -1,6 +1,42 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic tokens — eggshell & brown, both modes. */
+@theme inline {
+  --color-bg: var(--t-bg);
+  --color-surface: var(--t-surface);
+  --color-card: var(--t-card);
+  --color-line: var(--t-line);
+  --color-ink: var(--t-ink);
+  --color-soft: var(--t-soft);
+  --color-faint: var(--t-faint);
+  --color-accent: var(--t-accent);
+}
+
 :root {
+  /* light: eggshell paper, dark-brown ink */
+  --t-bg: #f2ede2;
+  --t-surface: #eae3d3;
+  --t-card: #f8f4ea;
+  --t-line: #d9cfba;
+  --t-ink: #37291d;
+  --t-soft: #6b5a47;
+  --t-faint: #9c8a71;
+  --t-accent: #8b5e3c;
+  color-scheme: light;
+}
+
+.dark {
+  /* dark: deep brown, eggshell ink */
+  --t-bg: #201a13;
+  --t-surface: #2a2218;
+  --t-card: #2e261b;
+  --t-line: #443727;
+  --t-ink: #efe7d6;
+  --t-soft: #c8b798;
+  --t-faint: #94826a;
+  --t-accent: #c9a179;
   color-scheme: dark;
 }
 
@@ -11,13 +47,28 @@ body,
 }
 
 body {
-  @apply bg-neutral-950 text-neutral-100 antialiased;
+  background-color: var(--t-bg);
+  color: var(--t-ink);
+  @apply antialiased;
 }
 
-/* react-grid-layout tweaks */
+/* Subtle paper-grain texture over everything. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* react-grid-layout */
 .react-grid-item.react-grid-placeholder {
-  @apply rounded-xl bg-neutral-700/40;
+  border-radius: 0.75rem;
+  background: var(--t-accent);
+  opacity: 0.15;
 }
 .react-grid-item > .react-resizable-handle::after {
-  border-color: rgb(115 115 115);
+  border-color: var(--t-faint);
 }

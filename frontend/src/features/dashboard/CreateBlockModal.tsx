@@ -21,21 +21,21 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+        className="w-full max-w-lg rounded-2xl border border-line bg-card p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold">Create a block</h2>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-200">
+          <button onClick={onClose} className="text-faint hover:text-ink">
             <X size={18} />
           </button>
         </div>
 
-        <p className="mb-2 text-sm text-neutral-400">
+        <p className="mb-2 text-sm text-soft">
           Describe what you want to keep up with. The agent finds and ranks the
           content for this block.
         </p>
@@ -49,7 +49,7 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
           }}
           rows={3}
           placeholder="e.g. Recent high-traffic papers on AI in medicine"
-          className="w-full resize-none rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm outline-none focus:border-neutral-500"
+          className="w-full resize-none rounded-lg border border-line bg-bg p-3 text-sm outline-none focus:border-accent"
         />
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -57,7 +57,7 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
             <button
               key={ex}
               onClick={() => setQuery(ex)}
-              className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+              className="rounded-full border border-line px-3 py-1 text-xs text-soft hover:border-faint hover:text-ink"
             >
               {ex}
             </button>
@@ -67,14 +67,14 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200"
+            className="rounded-lg px-3 py-2 text-sm text-soft hover:text-ink"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={!query.trim() || creating}
-            className="flex items-center gap-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg hover:opacity-90 disabled:opacity-50"
           >
             {creating && <Loader2 size={14} className="animate-spin" />}
             Create block

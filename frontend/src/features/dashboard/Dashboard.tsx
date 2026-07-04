@@ -37,16 +37,16 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <header className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+      <header className="flex items-center justify-between border-b border-line px-6 py-4">
         <div>
           <h1 className="text-lg font-semibold">Your rundown</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-faint">
             Everything you're keeping up with, in one view.
           </p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 hover:bg-white"
+          className="flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-medium text-bg hover:opacity-90"
         >
           <Plus size={16} /> Create block
         </button>
@@ -56,13 +56,13 @@ export function Dashboard() {
 
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
-          <p className="p-6 text-sm text-neutral-500">Loading…</p>
+          <p className="p-6 text-sm text-faint">Loading…</p>
         ) : blocks.length === 0 ? (
           <div className="mt-24 text-center">
-            <p className="text-sm text-neutral-400">No blocks yet.</p>
+            <p className="text-sm text-soft">No blocks yet.</p>
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-3 text-sm text-neutral-200 underline underline-offset-4"
+              className="mt-3 text-sm text-ink underline underline-offset-4"
             >
               Create your first block
             </button>
@@ -75,6 +75,8 @@ export function Dashboard() {
             cols={{ lg: 12, md: 8, sm: 4 }}
             rowHeight={80}
             draggableHandle=".block-drag"
+            compactType={null}
+            preventCollision
             onDragStop={commitLayout}
             onResizeStop={commitLayout}
           >

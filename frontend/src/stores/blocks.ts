@@ -21,13 +21,34 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   async load() {
     set({ loading: true });
     const blocks = await api.listBlocks();
+    // Free-form grid (no compaction): normalize legacy "place at bottom"
+    // sentinels (y >= 1000) into real positions below everything else.
+    let bottom = blocks
+      .filter((b) => b.layout.y < 1000)
+      .reduce((m, b) => Math.max(m, b.layout.y + b.layout.h), 0);
+    const fixed: Record<string, Block["layout"]> = {};
+    for (const b of blocks) {
+      if (b.layout.y >= 1000) {
+        b.layout = { ...b.layout, x: 0, y: bottom };
+        bottom += b.layout.h;
+        fixed[b.id] = b.layout;
+      }
+    }
     set({ blocks, loading: false });
+    if (Object.keys(fixed).length) persistLayouts(fixed);
   },
 
   async create(query) {
     set({ creating: true });
     const block = await api.createBlock(query);
-    set((s) => ({ blocks: [...s.blocks, block], creating: false }));
+    // Place the new block below everything else (no compaction to do it for us).
+    const bottom = get().blocks.reduce(
+      (m, b) => Math.max(m, b.layout.y + b.layout.h),
+      0,
+    );
+    const placed = { ...block, layout: { ...block.layout, x: 0, y: bottom } };
+    set((s) => ({ blocks: [...s.blocks, placed], creating: false }));
+    persistLayouts({ [placed.id]: placed.layout });
   },
 
   async remove(id) {
