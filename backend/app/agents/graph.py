@@ -11,8 +11,8 @@ from langgraph.graph import END, START, StateGraph
 from app.agents.nodes.critic import critic_node
 from app.agents.nodes.supervisor import supervisor_node
 from app.agents.state import BlockAgentState
-from app.integrations.arxiv.client import search_papers
 from app.integrations.espn.client import search_sports
+from app.integrations.papers.client import search_papers
 from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
 from app.integrations.youtube.client import search_videos
@@ -31,7 +31,11 @@ _CONNECTORS = {
 
 async def fetch_node(state: BlockAgentState) -> dict:
     connector = _CONNECTORS.get(state["source"])
-    items = await connector(state["search_terms"]) if connector else []
+    items = (
+        await connector(state["search_terms"], max_results=state.get("max_items", 5))
+        if connector
+        else []
+    )
     return {"items": items, "iterations": state.get("iterations", 0) + 1}
 
 

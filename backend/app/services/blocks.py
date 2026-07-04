@@ -10,10 +10,10 @@ import uuid
 
 from fastapi import HTTPException
 
-from app.integrations.arxiv.client import search_papers
 from app.integrations.espn.client import search_sports
 from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
+from app.integrations.papers.client import search_papers
 from app.integrations.youtube.client import search_videos
 from app.models.schemas import Block, BlockLayout, ContentItem, SourceKind
 
@@ -27,7 +27,7 @@ _PATTERNS: list[tuple[SourceKind, re.Pattern]] = [
 
 _SIZES: dict[SourceKind, tuple[int, int]] = {
     "youtube": (4, 6),
-    "papers": (4, 4),
+    "papers": (6, 7),
     "news": (4, 4),
     "gmail": (3, 4),
     "sports": (3, 3),
@@ -54,19 +54,23 @@ def default_layout(source: SourceKind) -> BlockLayout:
     return BlockLayout(x=0, y=9999, w=w, h=h)
 
 
-async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
+def default_max_items(source: SourceKind) -> int:
+    return 3 if source == "papers" else 5
+
+
+async def fetch_items(query: str, source: SourceKind, max_items: int = 5) -> list[ContentItem]:
     if source == "youtube":
-        return await search_videos(query)
+        return await search_videos(query, max_results=max_items)
     if source == "papers":
-        return await search_papers(query)
+        return await search_papers(query, max_results=max_items)
     if source == "gmail":
-        return await search_messages(query)
+        return await search_messages(query, max_results=max_items)
     if source == "news":
-        return await search_news(query)
+        return await search_news(query, max_results=max_items)
     if source == "sports":
-        return await search_sports(query)
+        return await search_sports(query, max_results=max_items)
     if source == "web":
-        return await search_news(query)  # best keyless proxy for generic queries
+        return await search_news(query, max_results=max_items)  # keyless generic proxy
     # Other connectors land in later slices; return an honest placeholder.
     return [
         ContentItem(
@@ -80,10 +84,12 @@ async def fetch_items(query: str, source: SourceKind) -> list[ContentItem]:
     ]
 
 
-async def safe_fetch(query: str, source: SourceKind) -> tuple[list[ContentItem], str]:
+async def safe_fetch(
+    query: str, source: SourceKind, max_items: int = 5
+) -> tuple[list[ContentItem], str]:
     """Fetch items; a connector failure degrades the block, never the request."""
     try:
-        return await fetch_items(query, source), "ready"
+        return await fetch_items(query, source, max_items), "ready"
     except HTTPException:
         raise  # auth errors (401) should surface as-is
     except Exception:
@@ -98,7 +104,8 @@ async def create_block(query: str) -> Block:
         return await _create_block_agentic(query)
 
     source = infer_source(query)
-    items, status = await safe_fetch(query, source)
+    max_items = default_max_items(source)
+    items, status = await safe_fetch(query, source, max_items)
     return Block(
         id=str(uuid.uuid4()),
         title=title_from(query),
@@ -107,6 +114,7 @@ async def create_block(query: str) -> Block:
         layout=default_layout(source),
         items=items,
         status=status,
+        max_items=max_items,
     )
 
 
@@ -117,10 +125,8 @@ async def _create_block_agentic(query: str) -> Block:
     try:
         state = await run_block_agent(query)
         source: SourceKind = state["source"]
+        max_items = state.get("max_items") or default_max_items(source)
         items = state.get("items") or []
-        # Connectorless sources still get an honest stub.
-        if not items and source not in ("youtube", "papers", "gmail"):
-            items = await fetch_items(query, source)
         return Block(
             id=str(uuid.uuid4()),
             title=state.get("title") or title_from(query),
@@ -129,13 +135,15 @@ async def _create_block_agentic(query: str) -> Block:
             layout=default_layout(source),
             items=items,
             status="ready",
+            max_items=max_items,
         )
     except HTTPException:
         raise
     except Exception:
         logging.exception("agent path failed; falling back to regex inference")
         source = infer_source(query)
-        items, status = await safe_fetch(query, source)
+        max_items = default_max_items(source)
+        items, status = await safe_fetch(query, source, max_items)
         return Block(
             id=str(uuid.uuid4()),
             title=title_from(query),
@@ -144,4 +152,5 @@ async def _create_block_agentic(query: str) -> Block:
             layout=default_layout(source),
             items=items,
             status=status,
+            max_items=max_items,
         )

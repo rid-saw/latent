@@ -8,6 +8,7 @@ class BlockAgentState(TypedDict, total=False):
     source: SourceKind    # supervisor's routing decision
     search_terms: str     # supervisor/critic-refined terms for the connector
     title: str            # short block title
+    max_items: int        # how many items to show (user-specified or default)
     items: list[ContentItem]
     approved: bool        # critic verdict
     iterations: int       # fetch rounds completed (reflection loop guard)

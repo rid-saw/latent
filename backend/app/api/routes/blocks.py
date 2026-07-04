@@ -40,7 +40,7 @@ async def refresh_block(block_id: str, db: Session = Depends(get_db)) -> Block:
     row = db.get(BlockRow, block_id)
     if not row:
         raise HTTPException(404, "Block not found")
-    items, status = await svc.safe_fetch(row.query, row.source)  # type: ignore[arg-type]
+    items, status = await svc.safe_fetch(row.query, row.source, row.max_items)  # type: ignore[arg-type]
     row.items = [i.model_dump() for i in items]
     row.status = status
     db.commit()

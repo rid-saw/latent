@@ -15,6 +15,7 @@ class BlockRow(Base):
     query: Mapped[str] = mapped_column(String)
     source: Mapped[str] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="ready")
+    max_items: Mapped[int] = mapped_column(default=5)
     layout: Mapped[dict] = mapped_column(JSON)
     items: Mapped[list] = mapped_column(JSON, default=list)  # cached last fetch
     created_at: Mapped[datetime] = mapped_column(
@@ -23,7 +24,10 @@ class BlockRow(Base):
 
     def to_schema(self) -> Block:
         return Block.model_validate(
-            {c: getattr(self, c) for c in ("id", "title", "query", "source", "status", "layout", "items")}
+            {
+                c: getattr(self, c)
+                for c in ("id", "title", "query", "source", "status", "max_items", "layout", "items")
+            }
         )
 
     @classmethod
