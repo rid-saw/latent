@@ -2,14 +2,9 @@ import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
 import { findSpot } from "@/lib/layout";
-import { useSettings } from "./settings";
 
-/** Everything already occupying grid space (incl. the rundown block). */
 function occupiedLayouts(blocks: Block[]): BlockLayout[] {
-  const s = useSettings.getState();
-  const occupied = blocks.filter((b) => b.layout.y < 1000).map((b) => b.layout);
-  if (s.rundownEnabled) occupied.push(s.rundownLayout);
-  return occupied;
+  return blocks.filter((b) => b.layout.y < 1000).map((b) => b.layout);
 }
 
 interface BlocksState {
