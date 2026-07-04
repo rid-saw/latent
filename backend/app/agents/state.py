@@ -9,6 +9,7 @@ class BlockAgentState(TypedDict, total=False):
     search_terms: str     # supervisor/critic-refined terms for the connector
     title: str            # short block title
     max_items: int        # how many items to show (user-specified or default)
+    wants_latest: bool    # newest-first rather than most-relevant
     items: list[ContentItem]
     approved: bool        # critic verdict
     iterations: int       # fetch rounds completed (reflection loop guard)

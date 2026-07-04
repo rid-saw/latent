@@ -29,6 +29,10 @@ class Plan(BaseModel):
         description="How many items to show: the number the user asked for if they "
         "named one, else 3",
     )
+    wants_latest: bool = Field(
+        description="True if the user wants the newest/most recent items "
+        "(e.g. 'latest', 'newest', 'new videos from X') rather than the most relevant"
+    )
 
 
 async def supervisor_node(state: BlockAgentState) -> dict:
@@ -38,4 +42,5 @@ async def supervisor_node(state: BlockAgentState) -> dict:
         "search_terms": plan.search_terms,
         "title": plan.title,
         "max_items": plan.max_items,
+        "wants_latest": plan.wants_latest,
     }

@@ -13,8 +13,11 @@ A fetcher returned these items:
 {items}
 
 Judge whether they serve the request. Drop items that are off-topic, spammy, or \
-clickbait (by index). If the overall set is weak and different search terms would \
-likely do better, set approved=false and provide refined_search_terms."""
+clickbait (by index). Exception: if the user asked for the latest items from a \
+specific channel, publication, or person, what matters is origin and recency, \
+NOT topic; do not drop items for covering varied subjects. If the overall set is \
+weak and different search terms would likely do better, set approved=false and \
+provide refined_search_terms."""
 
 
 class Critique(BaseModel):

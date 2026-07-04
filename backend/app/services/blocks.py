@@ -60,7 +60,8 @@ def default_max_items(source: SourceKind) -> int:  # noqa: ARG001 — uniform fo
 
 async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> list[ContentItem]:
     if source == "youtube":
-        return await search_videos(query, max_results=max_items)
+        latest = bool(re.search(r"latest|newest|recent|new video", query, re.I))
+        return await search_videos(query, max_results=max_items, latest=latest)
     if source == "papers":
         return await search_papers(query, max_results=max_items)
     if source == "gmail":

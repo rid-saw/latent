@@ -30,12 +30,15 @@ _CONNECTORS = {
 
 
 async def fetch_node(state: BlockAgentState) -> dict:
-    connector = _CONNECTORS.get(state["source"])
-    items = (
-        await connector(state["search_terms"], max_results=state.get("max_items", 3))
-        if connector
-        else []
-    )
+    source = state["source"]
+    terms = state["search_terms"]
+    n = state.get("max_items", 3)
+    if source == "youtube":
+        items = await search_videos(terms, max_results=n, latest=state.get("wants_latest", False))
+    elif connector := _CONNECTORS.get(source):
+        items = await connector(terms, max_results=n)
+    else:
+        items = []
     return {"items": items, "iterations": state.get("iterations", 0) + 1}
 
 
