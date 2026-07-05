@@ -26,7 +26,7 @@ export function Dashboard() {
     load();
   }, [load, activePageId]);
 
-  const pageName = pages.find((p) => p.id === activePageId)?.name ?? "Dashboard";
+  const page = pages.find((p) => p.id === activePageId);
 
   const layout: LayoutItem[] = blocks.map((b) => ({
     i: b.id,
@@ -51,12 +51,10 @@ export function Dashboard() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-line px-6 py-4">
-        <div>
-          <h1 className="text-lg font-semibold">{pageName}</h1>
-          <p className="text-sm text-faint">
-            Everything you're keeping up with, in one view.
-          </p>
-        </div>
+        <h1 className="flex items-center gap-2.5 text-lg font-semibold">
+          <span>{page?.emoji ?? "📄"}</span>
+          {page?.name ?? "Dashboard"}
+        </h1>
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-medium text-bg hover:opacity-90"

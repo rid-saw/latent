@@ -20,6 +20,8 @@ with engine.connect() as _conn:
     _add_column("blocks", "max_items", "max_items INTEGER NOT NULL DEFAULT 3")
     _add_column("blocks", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
     _add_column("rundowns", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
+    _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT '📄'")
+    _conn.execute(text("UPDATE pages SET emoji = '🏠' WHERE id = 'default' AND emoji = '📄'"))
     # Ensure the default page exists so existing blocks have a home.
     if not _conn.execute(text("SELECT 1 FROM pages WHERE id = 'default'")).first():
         _conn.execute(

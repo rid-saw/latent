@@ -31,6 +31,7 @@ export type BlockStatus = "idle" | "loading" | "ready" | "error";
 export interface Page {
   id: string;
   name: string;
+  emoji: string;
 }
 
 export interface Block {

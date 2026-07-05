@@ -14,8 +14,8 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const httpApi: Api = {
   listPages: () => req<Page[]>("/api/pages"),
-  createPage: (name) =>
-    req<Page>("/api/pages", { method: "POST", body: JSON.stringify({ name }) }),
+  createPage: (name, emoji) =>
+    req<Page>("/api/pages", { method: "POST", body: JSON.stringify({ name, emoji }) }),
   deletePage: (id) => req<void>(`/api/pages/${id}`, { method: "DELETE" }),
   listBlocks: (pageId) => req<Block[]>(`/api/blocks?page_id=${pageId}`),
   createBlock: (query, pageId) =>

@@ -6,7 +6,7 @@ import { httpApi } from "./http";
 // for a real HTTP client (when the backend exists) is a one-line change below.
 export interface Api {
   listPages(): Promise<Page[]>;
-  createPage(name: string): Promise<Page>;
+  createPage(name: string, emoji: string): Promise<Page>;
   deletePage(id: string): Promise<void>;
   listBlocks(pageId: string): Promise<Block[]>;
   createBlock(query: string, pageId: string): Promise<Block>;

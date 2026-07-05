@@ -2,7 +2,7 @@ import type { Api } from "./client";
 import type { Block, ContentItem, Page, SourceKind } from "@/types";
 import { defaultLayout } from "@/lib/layout";
 
-const mockPages: Page[] = [{ id: "default", name: "Home" }];
+const mockPages: Page[] = [{ id: "default", name: "Home", emoji: "🏠" }];
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -102,9 +102,9 @@ export const mockApi: Api = {
     await delay(100);
     return mockPages.map((p) => ({ ...p }));
   },
-  async createPage(name) {
+  async createPage(name, emoji) {
     await delay(150);
-    const page = { id: crypto.randomUUID(), name };
+    const page = { id: crypto.randomUUID(), name, emoji };
     mockPages.push(page);
     return { ...page };
   },

@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, FileText, Plus, Settings, Trash2 } from "lucide-react";
+import { ChevronLeft, Plus, Settings, Trash2 } from "lucide-react";
+
+const EMOJIS = [
+  "📄", "📰", "🗞️", "🤖", "🧠", "📈", "💰", "🔬",
+  "🏀", "⚽", "🏈", "🎾", "🎨", "🎬", "🎵", "🎮",
+  "📚", "🏥", "✈️", "🍳", "🏋️", "🌍", "🚀", "⭐",
+];
 import { Dashboard } from "@/features/dashboard/Dashboard";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { GoogleConnectCard } from "@/features/sources/GoogleConnectCard";
@@ -14,6 +20,7 @@ export default function App() {
   const [view, setView] = useState<View>("page");
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newEmoji, setNewEmoji] = useState("📄");
 
   useEffect(() => {
     load();
@@ -25,9 +32,11 @@ export default function App() {
 
   async function submitNewPage() {
     const name = newName.trim();
+    if (!name) return;
     setAdding(false);
     setNewName("");
-    if (name) await add(name);
+    if (name) await add(name, newEmoji);
+    setNewEmoji("📄");
     setView("page");
   }
 
@@ -90,7 +99,7 @@ export default function App() {
                     : "text-soft hover:bg-surface/70 hover:text-ink")
                 }
               >
-                <FileText size={16} className="shrink-0" />
+                <span className="shrink-0 text-base leading-none">{p.emoji}</span>
                 {sidebarOpen && <span className="truncate whitespace-nowrap">{p.name}</span>}
               </button>
               {sidebarOpen && pages.length > 1 && (
@@ -109,21 +118,42 @@ export default function App() {
 
           {sidebarOpen &&
             (adding ? (
-              <input
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitNewPage();
-                  if (e.key === "Escape") {
-                    setAdding(false);
-                    setNewName("");
-                  }
-                }}
-                onBlur={submitNewPage}
-                placeholder="Page name…"
-                className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
-              />
+              <div className="rounded-lg border border-line bg-bg p-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{newEmoji}</span>
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") submitNewPage();
+                      if (e.key === "Escape") {
+                        setAdding(false);
+                        setNewName("");
+                        setNewEmoji("📄");
+                      }
+                    }}
+                    placeholder="Page name…"
+                    className="w-full bg-transparent text-sm outline-none"
+                  />
+                </div>
+                <div className="mt-2 grid grid-cols-8 gap-0.5">
+                  {EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      onMouseDown={(ev) => ev.preventDefault()} // keep input focus
+                      onClick={() => setNewEmoji(e)}
+                      className={
+                        "rounded p-0.5 text-sm hover:bg-surface " +
+                        (newEmoji === e ? "bg-surface ring-1 ring-accent" : "")
+                      }
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[10px] text-faint">Enter to create · Esc to cancel</p>
+              </div>
             ) : (
               <button
                 onClick={() => setAdding(true)}

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/pages", tags=["pages"])
 @router.get("")
 def list_pages(db: Session = Depends(get_db)) -> list[Page]:
     rows = db.query(PageRow).order_by(PageRow.created_at).all()
-    return [Page(id=r.id, name=r.name) for r in rows]
+    return [Page(id=r.id, name=r.name, emoji=r.emoji) for r in rows]
 
 
 @router.post("")
@@ -23,10 +23,10 @@ def create_page(req: CreatePageRequest, db: Session = Depends(get_db)) -> Page:
     name = req.name.strip()
     if not name:
         raise HTTPException(400, "Page name can't be empty")
-    row = PageRow(id=str(uuid.uuid4()), name=name[:40])
+    row = PageRow(id=str(uuid.uuid4()), name=name[:40], emoji=req.emoji[:4] or "📄")
     db.add(row)
     db.commit()
-    return Page(id=row.id, name=row.name)
+    return Page(id=row.id, name=row.name, emoji=row.emoji)
 
 
 @router.delete("/{page_id}", status_code=204)

@@ -28,6 +28,7 @@ class BlockLayout(BaseModel):
 class Page(BaseModel):
     id: str
     name: str
+    emoji: str = "📄"
 
 
 class Block(BaseModel):
@@ -49,3 +50,4 @@ class CreateBlockRequest(BaseModel):
 
 class CreatePageRequest(BaseModel):
     name: str
+    emoji: str = "📄"

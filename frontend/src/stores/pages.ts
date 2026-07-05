@@ -7,7 +7,7 @@ interface PagesState {
   pages: Page[];
   activePageId: string;
   load: () => Promise<void>;
-  add: (name: string) => Promise<void>;
+  add: (name: string, emoji: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   setActive: (id: string) => void;
 }
@@ -26,8 +26,8 @@ export const usePages = create<PagesState>()(
         set({ pages, activePageId: active });
       },
 
-      async add(name) {
-        const page = await api.createPage(name);
+      async add(name, emoji) {
+        const page = await api.createPage(name, emoji);
         set((s) => ({ pages: [...s.pages, page], activePageId: page.id }));
       },
 
