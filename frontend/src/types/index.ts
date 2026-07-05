@@ -28,8 +28,14 @@ export interface BlockLayout {
 
 export type BlockStatus = "idle" | "loading" | "ready" | "error";
 
+export interface Page {
+  id: string;
+  name: string;
+}
+
 export interface Block {
   id: string;
+  page_id: string;
   title: string;
   query: string; // the natural-language prompt the user typed
   source: SourceKind;

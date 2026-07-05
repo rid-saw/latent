@@ -1,5 +1,5 @@
 import type { Api } from "./client";
-import type { Block, BlockLayout, Rundown } from "@/types";
+import type { Block, BlockLayout, Page, Rundown } from "@/types";
 
 const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -13,9 +13,16 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const httpApi: Api = {
-  listBlocks: () => req<Block[]>("/api/blocks"),
-  createBlock: (query) =>
-    req<Block>("/api/blocks", { method: "POST", body: JSON.stringify({ query }) }),
+  listPages: () => req<Page[]>("/api/pages"),
+  createPage: (name) =>
+    req<Page>("/api/pages", { method: "POST", body: JSON.stringify({ name }) }),
+  deletePage: (id) => req<void>(`/api/pages/${id}`, { method: "DELETE" }),
+  listBlocks: (pageId) => req<Block[]>(`/api/blocks?page_id=${pageId}`),
+  createBlock: (query, pageId) =>
+    req<Block>("/api/blocks", {
+      method: "POST",
+      body: JSON.stringify({ query, page_id: pageId }),
+    }),
   refreshBlock: (block) =>
     req<Block>(`/api/blocks/${block.id}/refresh`, { method: "POST" }),
   deleteBlock: (id) => req<void>(`/api/blocks/${id}`, { method: "DELETE" }),
@@ -24,6 +31,7 @@ export const httpApi: Api = {
       method: "PATCH",
       body: JSON.stringify(layouts),
     }),
-  getRundown: () => req<Rundown | null>("/api/rundown"),
-  generateRundown: () => req<Rundown>("/api/rundown", { method: "POST" }),
+  getRundown: (pageId) => req<Rundown | null>(`/api/rundown?page_id=${pageId}`),
+  generateRundown: (pageId) =>
+    req<Rundown>(`/api/rundown?page_id=${pageId}`, { method: "POST" }),
 };

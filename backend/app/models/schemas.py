@@ -25,8 +25,14 @@ class BlockLayout(BaseModel):
     h: int
 
 
+class Page(BaseModel):
+    id: str
+    name: str
+
+
 class Block(BaseModel):
     id: str
+    page_id: str = "default"
     title: str
     query: str
     source: SourceKind
@@ -38,3 +44,8 @@ class Block(BaseModel):
 
 class CreateBlockRequest(BaseModel):
     query: str
+    page_id: str = "default"
+
+
+class CreatePageRequest(BaseModel):
+    name: str

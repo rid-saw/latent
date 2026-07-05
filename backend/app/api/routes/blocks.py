@@ -12,14 +12,17 @@ router = APIRouter(prefix="/api/blocks", tags=["blocks"])
 
 
 @router.get("")
-def list_blocks(db: Session = Depends(get_db)) -> list[Block]:
-    rows = db.query(BlockRow).order_by(BlockRow.created_at).all()
-    return [r.to_schema() for r in rows]
+def list_blocks(page_id: str | None = None, db: Session = Depends(get_db)) -> list[Block]:
+    q = db.query(BlockRow).order_by(BlockRow.created_at)
+    if page_id:
+        q = q.filter(BlockRow.page_id == page_id)
+    return [r.to_schema() for r in q.all()]
 
 
 @router.post("")
 async def create_block(req: CreateBlockRequest, db: Session = Depends(get_db)) -> Block:
     block = await svc.create_block(req.query)
+    block.page_id = req.page_id
     db.add(BlockRow.from_schema(block))
     db.commit()
     return block

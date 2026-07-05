@@ -2,31 +2,35 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { Rundown } from "@/types";
 import { api } from "@/api/client";
+import { usePages } from "@/stores/pages";
 import { useSettings } from "@/stores/settings";
 
 const FRESH_MS = 30 * 60 * 1000; // reuse a briefing younger than 30 min
 
-/** The Rundown: fixed strip above the grid. Hidden entirely when disabled. */
+/** The Rundown: fixed strip above the grid, one per page. Hidden when disabled. */
 export function RundownPanel() {
   const rundownEnabled = useSettings((s) => s.rundownEnabled);
+  const activePageId = usePages((s) => s.activePageId);
   const [rundown, setRundown] = useState<Rundown | null>(null);
   const [generating, setGenerating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const autoRan = useRef(false);
+  const autoRan = useRef(new Set<string>()); // one auto-generation per page
 
   useEffect(() => {
-    if (!rundownEnabled || autoRan.current) return;
-    autoRan.current = true;
+    if (!rundownEnabled) return;
+    setRundown(null);
+    setNote(null);
     api
-      .getRundown()
+      .getRundown(activePageId)
       .then(async (latest) => {
         setRundown(latest);
         const fresh =
           latest && Date.now() - new Date(latest.created_at).getTime() < FRESH_MS;
-        if (fresh) return;
+        if (fresh || autoRan.current.has(activePageId)) return;
+        autoRan.current.add(activePageId);
         setGenerating(true);
         try {
-          setRundown(await api.generateRundown());
+          setRundown(await api.generateRundown(activePageId));
         } catch (e) {
           const msg = e instanceof Error ? e.message : "";
           setNote(
@@ -39,7 +43,7 @@ export function RundownPanel() {
         }
       })
       .catch(() => {});
-  }, [rundownEnabled]);
+  }, [rundownEnabled, activePageId]);
 
   if (!rundownEnabled) return null;
 

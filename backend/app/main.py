@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, blocks, rundown
+from app.api.routes import auth, blocks, pages, rundown
 from app.config import settings
 from sqlalchemy import text
 
@@ -10,12 +10,22 @@ from app.db.database import Base, engine
 
 Base.metadata.create_all(engine)
 
-# Micro-migration: create_all doesn't add columns to existing tables.
+# Micro-migrations: create_all doesn't add columns to existing tables.
 with engine.connect() as _conn:
-    _cols = [r[1] for r in _conn.execute(text("PRAGMA table_info(blocks)"))]
-    if "max_items" not in _cols:
-        _conn.execute(text("ALTER TABLE blocks ADD COLUMN max_items INTEGER NOT NULL DEFAULT 5"))
-        _conn.commit()
+    def _add_column(table: str, column: str, ddl: str) -> None:
+        cols = [r[1] for r in _conn.execute(text(f"PRAGMA table_info({table})"))]
+        if column not in cols:
+            _conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+
+    _add_column("blocks", "max_items", "max_items INTEGER NOT NULL DEFAULT 3")
+    _add_column("blocks", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
+    _add_column("rundowns", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
+    # Ensure the default page exists so existing blocks have a home.
+    if not _conn.execute(text("SELECT 1 FROM pages WHERE id = 'default'")).first():
+        _conn.execute(
+            text("INSERT INTO pages (id, name, created_at) VALUES ('default', 'Home', datetime('now'))")
+        )
+    _conn.commit()
 
 app = FastAPI(title="latent API")
 
@@ -29,6 +39,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(blocks.router)
+app.include_router(pages.router)
 app.include_router(rundown.router)
 
 

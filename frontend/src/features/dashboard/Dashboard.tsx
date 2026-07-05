@@ -8,6 +8,7 @@ import {
 import { Plus } from "lucide-react";
 import type { BlockLayout } from "@/types";
 import { useBlocks } from "@/stores/blocks";
+import { usePages } from "@/stores/pages";
 import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { RundownPanel } from "./RundownPanel";
@@ -17,12 +18,15 @@ const freeform = { ...noCompactor, preventCollision: true };
 
 export function Dashboard() {
   const { blocks, loading, load, applyLayouts } = useBlocks();
+  const { pages, activePageId } = usePages();
   const [showCreate, setShowCreate] = useState(false);
   const { width, containerRef, mounted } = useContainerWidth();
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, activePageId]);
+
+  const pageName = pages.find((p) => p.id === activePageId)?.name ?? "Dashboard";
 
   const layout: LayoutItem[] = blocks.map((b) => ({
     i: b.id,
@@ -48,7 +52,7 @@ export function Dashboard() {
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-line px-6 py-4">
         <div>
-          <h1 className="text-lg font-semibold">Your rundown</h1>
+          <h1 className="text-lg font-semibold">{pageName}</h1>
           <p className="text-sm text-faint">
             Everything you're keeping up with, in one view.
           </p>

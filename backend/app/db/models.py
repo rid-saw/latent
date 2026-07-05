@@ -7,10 +7,21 @@ from app.db.database import Base
 from app.models.schemas import Block
 
 
+class PageRow(Base):
+    __tablename__ = "pages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+
 class BlockRow(Base):
     __tablename__ = "blocks"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    page_id: Mapped[str] = mapped_column(String, default="default")
     title: Mapped[str] = mapped_column(String)
     query: Mapped[str] = mapped_column(String)
     source: Mapped[str] = mapped_column(String)
@@ -26,7 +37,10 @@ class BlockRow(Base):
         return Block.model_validate(
             {
                 c: getattr(self, c)
-                for c in ("id", "title", "query", "source", "status", "max_items", "layout", "items")
+                for c in (
+                    "id", "page_id", "title", "query", "source",
+                    "status", "max_items", "layout", "items",
+                )
             }
         )
 
@@ -39,6 +53,7 @@ class RundownRow(Base):
     __tablename__ = "rundowns"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    page_id: Mapped[str] = mapped_column(String, default="default")
     text: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

@@ -29,17 +29,22 @@ def _to_schema(row: RundownRow) -> Rundown:
 
 
 @router.get("")
-def latest(db: Session = Depends(get_db)) -> Rundown | None:
-    row = db.query(RundownRow).order_by(RundownRow.created_at.desc()).first()
+def latest(page_id: str = "default", db: Session = Depends(get_db)) -> Rundown | None:
+    row = (
+        db.query(RundownRow)
+        .filter(RundownRow.page_id == page_id)
+        .order_by(RundownRow.created_at.desc())
+        .first()
+    )
     return _to_schema(row) if row else None
 
 
 @router.post("")
-async def generate(db: Session = Depends(get_db)) -> Rundown:
+async def generate(page_id: str = "default", db: Session = Depends(get_db)) -> Rundown:
     if not agents_enabled():
         raise HTTPException(400, "No LLM backend — install Claude Code or set ANTHROPIC_API_KEY")
 
-    rows = db.query(BlockRow).all()
+    rows = db.query(BlockRow).filter(BlockRow.page_id == page_id).all()
     blocks = [
         {
             "title": r.title,
@@ -56,7 +61,7 @@ async def generate(db: Session = Depends(get_db)) -> Rundown:
         raise HTTPException(400, "No blocks with content — create some blocks first")
 
     text = await run_rundown(blocks)
-    row = RundownRow(id=str(uuid.uuid4()), text=text)
+    row = RundownRow(id=str(uuid.uuid4()), text=text, page_id=page_id)
     db.add(row)
     db.commit()
     return _to_schema(row)

@@ -2,10 +2,13 @@ import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
 import { compactUp, findSpot } from "@/lib/layout";
+import { usePages } from "./pages";
 
 function occupiedLayouts(blocks: Block[]): BlockLayout[] {
   return blocks.filter((b) => b.layout.y < 1000).map((b) => b.layout);
 }
+
+const activePageId = () => usePages.getState().activePageId;
 
 interface BlocksState {
   blocks: Block[];
@@ -25,7 +28,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
 
   async load() {
     set({ loading: true });
-    const blocks = await api.listBlocks();
+    const blocks = await api.listBlocks(activePageId());
     // Free-form grid (no compaction): normalize legacy "place at bottom"
     // sentinels (y >= 1000) into real reading-order positions.
     const occupied = occupiedLayouts(blocks);
@@ -43,7 +46,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
 
   async create(query) {
     set({ creating: true });
-    const block = await api.createBlock(query);
+    const block = await api.createBlock(query, activePageId());
     // Reading order: first free spot left->right, wrapping to the next row.
     const spot = findSpot(block.layout.w, block.layout.h, occupiedLayouts(get().blocks));
     const placed = { ...block, layout: { ...block.layout, ...spot } };

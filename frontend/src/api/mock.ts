@@ -1,6 +1,8 @@
 import type { Api } from "./client";
-import type { Block, ContentItem, SourceKind } from "@/types";
+import type { Block, ContentItem, Page, SourceKind } from "@/types";
 import { defaultLayout } from "@/lib/layout";
+
+const mockPages: Page[] = [{ id: "default", name: "Home" }];
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -37,6 +39,7 @@ function fakeItem(query: string, source: SourceKind): ContentItem {
 const seed: Block[] = [
   {
     id: "seed-papers",
+    page_id: "default",
     title: "Recent papers on AI + medicine",
     query: "recent high-impact papers on AI and medicine",
     source: "papers",
@@ -66,6 +69,7 @@ const seed: Block[] = [
   },
   {
     id: "seed-yt",
+    page_id: "default",
     title: "AI research channels",
     query: "new videos from AI research youtube channels",
     source: "youtube",
@@ -94,15 +98,31 @@ const seed: Block[] = [
 ];
 
 export const mockApi: Api = {
-  async listBlocks() {
-    await delay(150);
-    return seed.map((b) => ({ ...b }));
+  async listPages() {
+    await delay(100);
+    return mockPages.map((p) => ({ ...p }));
   },
-  async createBlock(query) {
+  async createPage(name) {
+    await delay(150);
+    const page = { id: crypto.randomUUID(), name };
+    mockPages.push(page);
+    return { ...page };
+  },
+  async deletePage(id) {
+    await delay(100);
+    const i = mockPages.findIndex((p) => p.id === id);
+    if (i >= 0) mockPages.splice(i, 1);
+  },
+  async listBlocks(pageId) {
+    await delay(150);
+    return seed.filter((b) => b.page_id === pageId).map((b) => ({ ...b }));
+  },
+  async createBlock(query, pageId) {
     await delay(600);
     const source = inferSource(query);
     return {
       id: crypto.randomUUID(),
+      page_id: pageId,
       title: titleFrom(query),
       query,
       source,
