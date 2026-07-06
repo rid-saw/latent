@@ -8,6 +8,7 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function inferSource(q: string): SourceKind {
   const s = q.toLowerCase();
+  if (/https?:\/\/|www\./.test(s)) return "site";
   if (/(paper|arxiv|research|study|journal)/.test(s)) return "papers";
   if (/(youtube|video|channel)/.test(s)) return "youtube";
   if (/(email|inbox|newsletter|gmail)/.test(s)) return "gmail";

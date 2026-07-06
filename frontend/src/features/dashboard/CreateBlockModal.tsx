@@ -36,8 +36,8 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="mb-2 text-sm text-soft">
-          Describe what you want to keep up with. The agent finds and ranks the
-          content for this block.
+          Describe what you want to keep up with, or paste a URL to pin that
+          site. The agent finds and ranks the content for this block.
         </p>
 
         <textarea

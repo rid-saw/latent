@@ -11,6 +11,7 @@ const sourceStyle: Record<SourceKind, string> = {
   news: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
   sports: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   web: "bg-stone-500/15 text-stone-600 dark:text-stone-300",
+  site: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
 };
 
 export function BlockCard({ block }: { block: Block }) {
@@ -54,7 +55,7 @@ export function BlockCard({ block }: { block: Block }) {
           block.items.map((item) =>
             item.source === "youtube" ? (
               <VideoCard key={item.id} item={item} />
-            ) : item.source === "papers" ? (
+            ) : item.source === "papers" || item.source === "site" ? (
               <PaperCard key={item.id} item={item} />
             ) : (
               <LinkPreviewCard key={item.id} item={item} />

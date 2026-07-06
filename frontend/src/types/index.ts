@@ -7,7 +7,8 @@ export type SourceKind =
   | "papers"
   | "news"
   | "sports"
-  | "web";
+  | "web"
+  | "site";
 
 export interface ContentItem {
   id: string;

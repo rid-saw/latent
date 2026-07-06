@@ -10,6 +10,7 @@ const sizes: Record<SourceKind, { w: number; h: number }> = {
   gmail: { w: 3, h: 4 },
   sports: { w: 3, h: 3 },
   web: { w: 4, h: 4 },
+  site: { w: 4, h: 4 },
 };
 
 export function defaultLayout(source: SourceKind): BlockLayout {

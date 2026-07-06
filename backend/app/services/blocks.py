@@ -14,7 +14,10 @@ from app.integrations.espn.client import search_sports
 from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
 from app.integrations.papers.client import search_papers
+from app.integrations.website.client import fetch_site
 from app.integrations.youtube.client import search_videos
+
+_URL_RE = re.compile(r"https?://\S+|www\.\S+", re.I)
 from app.models.schemas import Block, BlockLayout, ContentItem, SourceKind
 
 _PATTERNS: list[tuple[SourceKind, re.Pattern]] = [
@@ -32,6 +35,7 @@ _SIZES: dict[SourceKind, tuple[int, int]] = {
     "gmail": (3, 4),
     "sports": (3, 3),
     "web": (4, 4),
+    "site": (4, 4),
 }
 
 
@@ -59,6 +63,9 @@ def default_max_items(source: SourceKind) -> int:  # noqa: ARG001 — uniform fo
 
 
 async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> list[ContentItem]:
+    if source == "site":
+        m = _URL_RE.search(query)
+        return await fetch_site(m.group(0)) if m else []
     if source == "youtube":
         latest = bool(re.search(r"latest|newest|recent|new video", query, re.I))
         return await search_videos(query, max_results=max_items, latest=latest)
@@ -100,6 +107,20 @@ async def safe_fetch(
 
 async def create_block(query: str) -> Block:
     from app.agents.llm import agents_enabled  # lazy: avoid import cycle
+
+    # A pasted URL means "pin this site" — no routing or LLM needed.
+    if _URL_RE.search(query):
+        items, status = await safe_fetch(query, "site", 1)
+        return Block(
+            id=str(uuid.uuid4()),
+            title=(items[0].meta or title_from(query)) if items else title_from(query),
+            query=query,
+            source="site",
+            layout=default_layout("site"),
+            items=items,
+            status=status,
+            max_items=1,
+        )
 
     if agents_enabled():
         return await _create_block_agentic(query)
