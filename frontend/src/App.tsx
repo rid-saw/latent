@@ -77,8 +77,8 @@ export default function App() {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Page | null>(null);
-  // "checking" renders a blank themed screen so the app never flashes
-  // behind the intro while we ask the backend for its boot id.
+  // "checking": first paint is a plain cover (no dashboard flash) while we ask
+  // the backend whether this is a fresh boot; then play the intro or reveal.
   const [intro, setIntro] = useState<"checking" | "playing" | "done">("checking");
 
   useEffect(() => {
@@ -90,9 +90,12 @@ export default function App() {
   }, [theme]);
 
   // Play the intro once per backend start (dev.sh run): the backend mints a
-  // boot_id at startup; a new one means a fresh session.
+  // boot_id at startup; a new one means a fresh session. Capped at 1.5s so a
+  // hung backend can't hold the cover forever.
   useEffect(() => {
-    fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) })
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1500);
+    fetch(`${API_BASE}/health`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then(({ boot_id }) => {
         if (boot_id && localStorage.getItem("latent-boot-id") !== boot_id) {
@@ -110,15 +113,13 @@ export default function App() {
         } else {
           setIntro("done");
         }
-      });
+      })
+      .finally(() => clearTimeout(timer));
   }, []);
-
-  if (intro === "checking") {
-    return <div className="fixed inset-0 bg-bg" />;
-  }
 
   return (
     <div className="flex h-full">
+      {intro === "checking" && <div className="fixed inset-0 z-50 bg-bg" />}
       {intro === "playing" && <IntroSplash onDone={() => setIntro("done")} />}
 
       <aside
