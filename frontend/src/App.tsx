@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Plus, Settings, Trash2 } from "lucide-react";
+import type { Page } from "@/types";
 
 const EMOJIS = [
   "📄", "📰", "🗞️", "🤖", "🧠", "📈", "💰", "🔬",
@@ -21,6 +22,7 @@ export default function App() {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("📄");
+  const [pendingDelete, setPendingDelete] = useState<Page | null>(null);
 
   useEffect(() => {
     load();
@@ -104,9 +106,7 @@ export default function App() {
               </button>
               {sidebarOpen && pages.length > 1 && (
                 <button
-                  onClick={() => {
-                    if (confirm(`Delete "${p.name}" and its blocks?`)) remove(p.id);
-                  }}
+                  onClick={() => setPendingDelete(p)}
                   className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded p-1 text-faint hover:text-red-500 group-hover:block"
                   title="Delete page"
                 >
@@ -187,6 +187,42 @@ export default function App() {
       <main className="flex flex-1 flex-col overflow-hidden">
         {view === "page" ? <Dashboard /> : <SettingsPage />}
       </main>
+
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-line bg-card p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-medium">
+              Delete "{pendingDelete.emoji} {pendingDelete.name}"?
+            </p>
+            <p className="mt-1 text-xs text-faint">
+              This deletes the page and all of its blocks. It can't be undone.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="rounded-lg border border-line px-3 py-1.5 text-xs text-soft hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  remove(pendingDelete.id);
+                  setPendingDelete(null);
+                }}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+              >
+                Delete page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
