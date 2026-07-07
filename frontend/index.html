@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>latent</title>
+    <script>
+      // Apply the saved theme before first paint — avoids a light flash in dark mode.
+      try {
+        var s = JSON.parse(localStorage.getItem("latent-settings"));
+        if (s && s.state && s.state.theme === "dark")
+          document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

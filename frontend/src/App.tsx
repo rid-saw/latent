@@ -77,7 +77,9 @@ export default function App() {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Page | null>(null);
-  const [showIntro, setShowIntro] = useState(false);
+  // "checking" renders a blank themed screen so the app never flashes
+  // behind the intro while we ask the backend for its boot id.
+  const [intro, setIntro] = useState<"checking" | "playing" | "done">("checking");
 
   useEffect(() => {
     load();
@@ -90,26 +92,34 @@ export default function App() {
   // Play the intro once per backend start (dev.sh run): the backend mints a
   // boot_id at startup; a new one means a fresh session.
   useEffect(() => {
-    fetch(`${API_BASE}/health`)
+    fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) })
       .then((r) => r.json())
       .then(({ boot_id }) => {
         if (boot_id && localStorage.getItem("latent-boot-id") !== boot_id) {
           localStorage.setItem("latent-boot-id", boot_id);
-          setShowIntro(true);
+          setIntro("playing");
+        } else {
+          setIntro("done");
         }
       })
       .catch(() => {
         // Mock mode / backend down: play once per browser.
         if (!localStorage.getItem("latent-intro-seen")) {
           localStorage.setItem("latent-intro-seen", "1");
-          setShowIntro(true);
+          setIntro("playing");
+        } else {
+          setIntro("done");
         }
       });
   }, []);
 
+  if (intro === "checking") {
+    return <div className="fixed inset-0 bg-bg" />;
+  }
+
   return (
     <div className="flex h-full">
-      {showIntro && <IntroSplash onDone={() => setShowIntro(false)} />}
+      {intro === "playing" && <IntroSplash onDone={() => setIntro("done")} />}
 
       <aside
         className={
