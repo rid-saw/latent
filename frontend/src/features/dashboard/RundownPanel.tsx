@@ -58,7 +58,7 @@ export function RundownPanel() {
 
   if (ready && blockCount === 0) {
     return (
-      <div className="mx-4 mt-4 rounded-xl border border-dashed border-line bg-card/50 p-4">
+      <div className="mx-2 mt-2 rounded-xl border border-dashed border-line bg-card/50 p-4">
         <p className="text-sm font-medium">The Rundown</p>
         <p className="mt-1 text-sm text-faint">
           Create a block to get started — once this page has content, your
@@ -69,7 +69,7 @@ export function RundownPanel() {
   }
 
   return (
-    <div className="mx-4 mt-4 rounded-xl border border-line bg-card p-4">
+    <div className="mx-2 mt-2 rounded-xl border border-line bg-card p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         The Rundown
         {rundown && !generating && (

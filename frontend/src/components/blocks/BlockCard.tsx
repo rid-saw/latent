@@ -79,7 +79,7 @@ export function BlockCard({ block }: { block: Block }) {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-2">
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-1">
         {block.items.length === 0 ? (
           <p className="text-xs text-faint">No items yet.</p>
         ) : (

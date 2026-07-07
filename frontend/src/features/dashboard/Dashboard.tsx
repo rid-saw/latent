@@ -77,7 +77,7 @@ export function Dashboard() {
 
       <RundownPanel />
 
-      <div ref={containerRef} className="flex-1 overflow-auto p-4">
+      <div ref={containerRef} className="flex-1 overflow-auto p-2">
         {loading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((i) => (
@@ -111,7 +111,7 @@ export function Dashboard() {
               className="layout"
               width={width}
               layout={layout}
-              gridConfig={{ cols: 24, rowHeight: 40, margin: [8, 8] }}
+              gridConfig={{ cols: 24, rowHeight: 40, margin: [6, 6], containerPadding: [0, 0] }}
               dragConfig={{ handle: ".block-drag" }}
               compactor={freeform}
               onDragStop={commitLayout}
