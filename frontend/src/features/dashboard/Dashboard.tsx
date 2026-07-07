@@ -9,6 +9,7 @@ import { Plus } from "lucide-react";
 import type { BlockLayout } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { usePages } from "@/stores/pages";
+import { useSettings } from "@/stores/settings";
 import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { RundownPanel } from "./RundownPanel";
@@ -25,6 +26,17 @@ export function Dashboard() {
   useEffect(() => {
     load();
   }, [load, activePageId]);
+
+  // Quiet auto-refresh: the dashboard stays live without pressing ↻.
+  const autoRefreshMins = useSettings((s) => s.autoRefreshMins);
+  useEffect(() => {
+    if (!autoRefreshMins) return;
+    const timer = setInterval(
+      () => useBlocks.getState().refreshAll(),
+      autoRefreshMins * 60_000,
+    );
+    return () => clearInterval(timer);
+  }, [autoRefreshMins, activePageId]);
 
   const page = pages.find((p) => p.id === activePageId);
 
@@ -67,7 +79,19 @@ export function Dashboard() {
 
       <div ref={containerRef} className="flex-1 overflow-auto p-4">
         {loading ? (
-          <p className="p-6 text-sm text-faint">Loading…</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-xl border border-line bg-card p-3"
+              >
+                <div className="mb-3 h-4 w-2/5 rounded bg-surface" />
+                <div className="mb-2 h-24 rounded-lg bg-surface" />
+                <div className="mb-1.5 h-3 w-4/5 rounded bg-surface" />
+                <div className="h-3 w-3/5 rounded bg-surface" />
+              </div>
+            ))}
+          </div>
         ) : blocks.length === 0 ? (
           <div className="mt-24 text-center">
             <p className="text-sm text-soft">No blocks yet.</p>

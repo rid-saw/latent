@@ -7,9 +7,11 @@ interface SettingsState {
   theme: Theme;
   rundownEnabled: boolean; // auto-generate the briefing on load
   sidebarOpen: boolean; // expanded sidebar vs collapsed icon rail
+  autoRefreshMins: number; // 0 = off
   setTheme: (theme: Theme) => void;
   setRundownEnabled: (enabled: boolean) => void;
   setSidebarOpen: (open: boolean) => void;
+  setAutoRefreshMins: (mins: number) => void;
 }
 
 export const useSettings = create<SettingsState>()(
@@ -18,9 +20,11 @@ export const useSettings = create<SettingsState>()(
       theme: "light",
       rundownEnabled: true,
       sidebarOpen: true,
+      autoRefreshMins: 15,
       setTheme: (theme) => set({ theme }),
       setRundownEnabled: (rundownEnabled) => set({ rundownEnabled }),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+      setAutoRefreshMins: (autoRefreshMins) => set({ autoRefreshMins }),
     }),
     {
       name: "latent-settings",

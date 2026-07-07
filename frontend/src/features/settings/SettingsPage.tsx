@@ -1,8 +1,22 @@
 import { Moon, Sparkles, Sun } from "lucide-react";
 import { useSettings } from "@/stores/settings";
 
+const REFRESH_OPTIONS = [
+  { label: "Off", value: 0 },
+  { label: "5m", value: 5 },
+  { label: "15m", value: 15 },
+  { label: "30m", value: 30 },
+];
+
 export function SettingsPage() {
-  const { theme, setTheme, rundownEnabled, setRundownEnabled } = useSettings();
+  const {
+    theme,
+    setTheme,
+    rundownEnabled,
+    setRundownEnabled,
+    autoRefreshMins,
+    setAutoRefreshMins,
+  } = useSettings();
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -27,6 +41,28 @@ export function SettingsPage() {
                 icon={<Moon size={14} />}
                 label="Dark"
               />
+            </div>
+          }
+        />
+        <Row
+          title="Auto-refresh"
+          description="Quietly refetch every block's content on an interval."
+          control={
+            <div className="flex rounded-lg border border-line p-0.5">
+              {REFRESH_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setAutoRefreshMins(o.value)}
+                  className={
+                    "rounded-md px-2.5 py-1.5 text-xs " +
+                    (autoRefreshMins === o.value
+                      ? "bg-ink text-bg"
+                      : "text-soft hover:text-ink")
+                  }
+                >
+                  {o.label}
+                </button>
+              ))}
             </div>
           }
         />

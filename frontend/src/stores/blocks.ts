@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
 import { compactUp, findSpot } from "@/lib/layout";
+import { diffAndRecord, forgetBlock } from "@/lib/seen";
 import { usePages } from "./pages";
 
 function occupiedLayouts(blocks: Block[]): BlockLayout[] {
@@ -15,10 +16,12 @@ interface BlocksState {
   loading: boolean;
   loadedPageId: string | null; // which page the current blocks belong to
   creating: boolean;
+  freshIds: Record<string, string[]>; // per block: item ids unseen before now
   load: () => Promise<void>;
   create: (query: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   refresh: (id: string) => Promise<void>;
+  refreshAll: () => Promise<void>;
   applyLayouts: (layouts: Record<string, BlockLayout>) => void;
 }
 
@@ -27,6 +30,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   loading: false,
   loadedPageId: null,
   creating: false,
+  freshIds: {},
 
   async load() {
     const pageId = activePageId();
@@ -43,7 +47,11 @@ export const useBlocks = create<BlocksState>((set, get) => ({
         fixed[b.id] = b.layout;
       }
     }
-    set({ blocks, loading: false, loadedPageId: pageId });
+    const freshIds: Record<string, string[]> = {};
+    for (const b of blocks) {
+      freshIds[b.id] = diffAndRecord(b.id, b.items.map((i) => i.id));
+    }
+    set({ blocks, loading: false, loadedPageId: pageId, freshIds });
     if (Object.keys(fixed).length) persistLayouts(fixed);
   },
 
@@ -59,6 +67,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
 
   async remove(id) {
     await api.deleteBlock(id);
+    forgetBlock(id);
     // Gravity pass: neighbors slide up into the vacated space.
     const { blocks, changed } = compactUp(get().blocks.filter((b) => b.id !== id));
     set({ blocks });
@@ -72,7 +81,16 @@ export const useBlocks = create<BlocksState>((set, get) => ({
       blocks: s.blocks.map((b) => (b.id === id ? { ...b, status: "loading" } : b)),
     }));
     const updated = await api.refreshBlock(block);
-    set((s) => ({ blocks: s.blocks.map((b) => (b.id === id ? updated : b)) }));
+    const fresh = diffAndRecord(id, updated.items.map((i) => i.id));
+    set((s) => ({
+      blocks: s.blocks.map((b) => (b.id === id ? updated : b)),
+      freshIds: { ...s.freshIds, [id]: fresh },
+    }));
+  },
+
+  async refreshAll() {
+    // Quiet background refresh — free content APIs only, no LLM.
+    await Promise.allSettled(get().blocks.map((b) => get().refresh(b.id)));
   },
 
   applyLayouts(layouts) {

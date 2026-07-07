@@ -14,9 +14,19 @@ const sourceStyle: Record<SourceKind, string> = {
   site: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
 };
 
+function NewBadge() {
+  return (
+    <span className="absolute right-1.5 top-1.5 z-10 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white shadow">
+      new
+    </span>
+  );
+}
+
 export function BlockCard({ block }: { block: Block }) {
   const { refresh, remove } = useBlocks();
+  const freshIds = useBlocks((s) => s.freshIds[block.id]);
   const loading = block.status === "loading";
+  const isNew = (id: string) => !!freshIds?.includes(id);
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-card">
@@ -54,11 +64,11 @@ export function BlockCard({ block }: { block: Block }) {
         ) : (
           block.items.map((item) =>
             item.source === "youtube" ? (
-              <VideoCard key={item.id} item={item} />
+              <VideoCard key={item.id} item={item} isNew={isNew(item.id)} />
             ) : item.source === "papers" || item.source === "site" ? (
-              <PaperCard key={item.id} item={item} />
+              <PaperCard key={item.id} item={item} isNew={isNew(item.id)} />
             ) : (
-              <LinkPreviewCard key={item.id} item={item} />
+              <LinkPreviewCard key={item.id} item={item} isNew={isNew(item.id)} />
             ),
           )
         )}
@@ -68,14 +78,15 @@ export function BlockCard({ block }: { block: Block }) {
 }
 
 /** YouTube-style: big 16:9 thumbnail, title + channel below. */
-function VideoCard({ item }: { item: ContentItem }) {
+function VideoCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
+      className="relative block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
     >
+      {isNew && <NewBadge />}
       {item.thumbnail && (
         <img
           src={item.thumbnail}
@@ -120,15 +131,16 @@ function PaperCover({ item }: { item: ContentItem }) {
 }
 
 /** Papers: large visual card — publisher og:image, or a generated cover. */
-function PaperCard({ item }: { item: ContentItem }) {
+function PaperCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
   const [imgFailed, setImgFailed] = useState(false);
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
+      className="relative block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
     >
+      {isNew && <NewBadge />}
       {item.thumbnail && !imgFailed ? (
         <img
           src={item.thumbnail}
@@ -160,14 +172,15 @@ function PaperCard({ item }: { item: ContentItem }) {
 }
 
 /** Link-preview style (WhatsApp/OG): thumbnail beside title, source name, summary. */
-function LinkPreviewCard({ item }: { item: ContentItem }) {
+function LinkPreviewCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="flex gap-3 overflow-hidden rounded-lg border border-line p-2 transition hover:border-faint hover:bg-surface/60"
+      className="relative flex gap-3 overflow-hidden rounded-lg border border-line p-2 transition hover:border-faint hover:bg-surface/60"
     >
+      {isNew && <NewBadge />}
       {item.thumbnail && (
         <img
           src={item.thumbnail}
