@@ -25,6 +25,7 @@ function NewBadge() {
 export function BlockCard({ block }: { block: Block }) {
   const { refresh, remove } = useBlocks();
   const freshIds = useBlocks((s) => s.freshIds[block.id]);
+  const [confirming, setConfirming] = useState(false);
   const loading = block.status === "loading";
   const isNew = (id: string) => !!freshIds?.includes(id);
 
@@ -50,7 +51,7 @@ export function BlockCard({ block }: { block: Block }) {
           <RefreshCw size={14} className={cn(loading && "animate-spin")} />
         </button>
         <button
-          onClick={() => remove(block.id)}
+          onClick={() => setConfirming(true)}
           className="text-faint hover:text-red-500"
           title="Remove"
         >
@@ -58,7 +59,27 @@ export function BlockCard({ block }: { block: Block }) {
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
+      {confirming && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-card/95 p-4 backdrop-blur-sm">
+          <p className="text-sm font-medium">Delete this block?</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConfirming(false)}
+              className="rounded-lg border border-line px-3 py-1.5 text-xs text-soft hover:text-ink"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => remove(block.id)}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-2">
         {block.items.length === 0 ? (
           <p className="text-xs text-faint">No items yet.</p>
         ) : (
@@ -152,7 +173,7 @@ function PaperCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
       ) : (
         <PaperCover item={item} />
       )}
-      <div className="p-3">
+      <div className="p-2.5">
         {item.meta && (
           <p className="truncate text-[11px] font-medium uppercase tracking-wide text-accent">
             {item.meta}

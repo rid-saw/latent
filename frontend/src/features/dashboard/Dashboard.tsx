@@ -111,7 +111,7 @@ export function Dashboard() {
               className="layout"
               width={width}
               layout={layout}
-              gridConfig={{ cols: 24, rowHeight: 40 }}
+              gridConfig={{ cols: 24, rowHeight: 40, margin: [8, 8] }}
               dragConfig={{ handle: ".block-drag" }}
               compactor={freeform}
               onDragStop={commitLayout}
