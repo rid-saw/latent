@@ -57,6 +57,11 @@ app.include_router(pages.router)
 app.include_router(rundown.router)
 
 
+import uuid as _uuid
+
+BOOT_ID = str(_uuid.uuid4())  # new per backend start — frontend replays the intro on change
+
+
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True}
+    return {"ok": True, "boot_id": BOOT_ID}

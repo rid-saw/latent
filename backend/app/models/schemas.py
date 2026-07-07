@@ -51,3 +51,8 @@ class CreateBlockRequest(BaseModel):
 class CreatePageRequest(BaseModel):
     name: str
     emoji: str = "file-text"
+
+
+class UpdatePageRequest(BaseModel):
+    name: str | None = None
+    emoji: str | None = None

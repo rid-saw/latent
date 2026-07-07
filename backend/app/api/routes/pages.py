@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import BlockRow, PageRow, RundownRow
-from app.models.schemas import CreatePageRequest, Page
+from app.models.schemas import CreatePageRequest, Page, UpdatePageRequest
 
 router = APIRouter(prefix="/api/pages", tags=["pages"])
 
@@ -26,6 +26,19 @@ def create_page(req: CreatePageRequest, db: Session = Depends(get_db)) -> Page:
     # "emoji" holds an icon name (e.g. "newspaper") or a legacy emoji character.
     row = PageRow(id=str(uuid.uuid4()), name=name[:40], emoji=req.emoji[:32] or "file-text")
     db.add(row)
+    db.commit()
+    return Page(id=row.id, name=row.name, emoji=row.emoji)
+
+
+@router.patch("/{page_id}")
+def update_page(page_id: str, req: UpdatePageRequest, db: Session = Depends(get_db)) -> Page:
+    row = db.get(PageRow, page_id)
+    if not row:
+        raise HTTPException(404, "Page not found")
+    if req.name is not None and req.name.strip():
+        row.name = req.name.strip()[:40]
+    if req.emoji:
+        row.emoji = req.emoji[:32]
     db.commit()
     return Page(id=row.id, name=row.name, emoji=row.emoji)
 

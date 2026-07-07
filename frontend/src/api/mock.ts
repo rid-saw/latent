@@ -109,6 +109,13 @@ export const mockApi: Api = {
     mockPages.push(page);
     return { ...page };
   },
+  async updatePage(id, name, emoji) {
+    await delay(100);
+    const page = mockPages.find((p) => p.id === id)!;
+    page.name = name;
+    page.emoji = emoji;
+    return { ...page };
+  },
   async deletePage(id) {
     await delay(100);
     const i = mockPages.findIndex((p) => p.id === id);

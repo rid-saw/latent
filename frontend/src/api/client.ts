@@ -7,6 +7,7 @@ import { httpApi } from "./http";
 export interface Api {
   listPages(): Promise<Page[]>;
   createPage(name: string, emoji: string): Promise<Page>;
+  updatePage(id: string, name: string, emoji: string): Promise<Page>;
   deletePage(id: string): Promise<void>;
   listBlocks(pageId: string): Promise<Block[]>;
   createBlock(query: string, pageId: string): Promise<Block>;
