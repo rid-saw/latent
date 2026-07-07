@@ -20,7 +20,7 @@ export const useSettings = create<SettingsState>()(
       theme: "light",
       rundownEnabled: true,
       sidebarOpen: true,
-      autoRefreshMins: 15,
+      autoRefreshMins: 30,
       setTheme: (theme) => set({ theme }),
       setRundownEnabled: (rundownEnabled) => set({ rundownEnabled }),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
