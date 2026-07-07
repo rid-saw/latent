@@ -13,6 +13,7 @@ const activePageId = () => usePages.getState().activePageId;
 interface BlocksState {
   blocks: Block[];
   loading: boolean;
+  loadedPageId: string | null; // which page the current blocks belong to
   creating: boolean;
   load: () => Promise<void>;
   create: (query: string) => Promise<void>;
@@ -24,11 +25,13 @@ interface BlocksState {
 export const useBlocks = create<BlocksState>((set, get) => ({
   blocks: [],
   loading: false,
+  loadedPageId: null,
   creating: false,
 
   async load() {
+    const pageId = activePageId();
     set({ loading: true });
-    const blocks = await api.listBlocks(activePageId());
+    const blocks = await api.listBlocks(pageId);
     // Free-form grid (no compaction): normalize legacy "place at bottom"
     // sentinels (y >= 1000) into real reading-order positions.
     const occupied = occupiedLayouts(blocks);
@@ -40,7 +43,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
         fixed[b.id] = b.layout;
       }
     }
-    set({ blocks, loading: false });
+    set({ blocks, loading: false, loadedPageId: pageId });
     if (Object.keys(fixed).length) persistLayouts(fixed);
   },
 
