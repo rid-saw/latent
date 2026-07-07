@@ -23,7 +23,8 @@ def create_page(req: CreatePageRequest, db: Session = Depends(get_db)) -> Page:
     name = req.name.strip()
     if not name:
         raise HTTPException(400, "Page name can't be empty")
-    row = PageRow(id=str(uuid.uuid4()), name=name[:40], emoji=req.emoji[:4] or "📄")
+    # "emoji" holds an icon name (e.g. "newspaper") or a legacy emoji character.
+    row = PageRow(id=str(uuid.uuid4()), name=name[:40], emoji=req.emoji[:32] or "file-text")
     db.add(row)
     db.commit()
     return Page(id=row.id, name=row.name, emoji=row.emoji)

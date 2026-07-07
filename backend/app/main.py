@@ -20,8 +20,9 @@ with engine.connect() as _conn:
     _add_column("blocks", "max_items", "max_items INTEGER NOT NULL DEFAULT 3")
     _add_column("blocks", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
     _add_column("rundowns", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
-    _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT '📄'")
-    _conn.execute(text("UPDATE pages SET emoji = '🏠' WHERE id = 'default' AND emoji = '📄'"))
+    _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT 'file-text'")
+    # Emoji era -> lucide icon names; migrate known defaults once.
+    _conn.execute(text("UPDATE pages SET emoji = 'home' WHERE id = 'default' AND emoji IN ('📄', '🏠')"))
     # Ensure the default page exists so existing blocks have a home.
     if not _conn.execute(text("SELECT 1 FROM pages WHERE id = 'default'")).first():
         _conn.execute(

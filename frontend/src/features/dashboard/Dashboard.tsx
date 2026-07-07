@@ -10,6 +10,7 @@ import type { BlockLayout } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { usePages } from "@/stores/pages";
 import { useSettings } from "@/stores/settings";
+import { PageIcon } from "@/lib/pageIcons";
 import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { RundownPanel } from "./RundownPanel";
@@ -64,7 +65,7 @@ export function Dashboard() {
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-line px-6 py-4">
         <h1 className="flex items-center gap-2.5 text-lg font-semibold">
-          <span>{page?.emoji ?? "📄"}</span>
+          <PageIcon icon={page?.emoji ?? "file-text"} size={18} />
           {page?.name ?? "Dashboard"}
         </h1>
         <button

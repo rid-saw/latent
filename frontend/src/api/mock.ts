@@ -2,7 +2,7 @@ import type { Api } from "./client";
 import type { Block, ContentItem, Page, SourceKind } from "@/types";
 import { defaultLayout } from "@/lib/layout";
 
-const mockPages: Page[] = [{ id: "default", name: "Home", emoji: "🏠" }];
+const mockPages: Page[] = [{ id: "default", name: "Home", emoji: "home" }];
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

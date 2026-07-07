@@ -28,7 +28,7 @@ class BlockLayout(BaseModel):
 class Page(BaseModel):
     id: str
     name: str
-    emoji: str = "📄"
+    emoji: str = "file-text"  # lucide icon name, or a legacy emoji character
 
 
 class Block(BaseModel):
@@ -50,4 +50,4 @@ class CreateBlockRequest(BaseModel):
 
 class CreatePageRequest(BaseModel):
     name: str
-    emoji: str = "📄"
+    emoji: str = "file-text"

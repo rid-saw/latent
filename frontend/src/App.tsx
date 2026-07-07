@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Plus, Settings, Trash2 } from "lucide-react";
 import type { Page } from "@/types";
-
-const EMOJIS = [
-  "📄", "📰", "🗞️", "🤖", "🧠", "📈", "💰", "🔬",
-  "🏀", "⚽", "🏈", "🎾", "🎨", "🎬", "🎵", "🎮",
-  "📚", "🏥", "✈️", "🍳", "🏋️", "🌍", "🚀", "⭐",
-];
+import { PAGE_ICONS, PageIcon } from "@/lib/pageIcons";
 import { Dashboard } from "@/features/dashboard/Dashboard";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { GoogleConnectCard } from "@/features/sources/GoogleConnectCard";
@@ -21,7 +16,7 @@ export default function App() {
   const [view, setView] = useState<View>("page");
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newEmoji, setNewEmoji] = useState("📄");
+  const [newEmoji, setNewEmoji] = useState("file-text");
   const [pendingDelete, setPendingDelete] = useState<Page | null>(null);
 
   useEffect(() => {
@@ -38,7 +33,7 @@ export default function App() {
     setAdding(false);
     setNewName("");
     if (name) await add(name, newEmoji);
-    setNewEmoji("📄");
+    setNewEmoji("file-text");
     setView("page");
   }
 
@@ -101,7 +96,7 @@ export default function App() {
                     : "text-soft hover:bg-surface/70 hover:text-ink")
                 }
               >
-                <span className="shrink-0 text-base leading-none">{p.emoji}</span>
+                <PageIcon icon={p.emoji} size={16} />
                 {sidebarOpen && <span className="truncate whitespace-nowrap">{p.name}</span>}
               </button>
               {sidebarOpen && pages.length > 1 && (
@@ -120,7 +115,7 @@ export default function App() {
             (adding ? (
               <div className="rounded-lg border border-line bg-bg p-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">{newEmoji}</span>
+                  <PageIcon icon={newEmoji} size={16} />
                   <input
                     autoFocus
                     value={newName}
@@ -130,7 +125,7 @@ export default function App() {
                       if (e.key === "Escape") {
                         setAdding(false);
                         setNewName("");
-                        setNewEmoji("📄");
+                        setNewEmoji("file-text");
                       }
                     }}
                     placeholder="Page name…"
@@ -138,17 +133,18 @@ export default function App() {
                   />
                 </div>
                 <div className="mt-2 grid grid-cols-8 gap-0.5">
-                  {EMOJIS.map((e) => (
+                  {Object.entries(PAGE_ICONS).map(([name, Icon]) => (
                     <button
-                      key={e}
+                      key={name}
                       onMouseDown={(ev) => ev.preventDefault()} // keep input focus
-                      onClick={() => setNewEmoji(e)}
+                      onClick={() => setNewEmoji(name)}
+                      title={name}
                       className={
-                        "rounded p-0.5 text-sm hover:bg-surface " +
-                        (newEmoji === e ? "bg-surface ring-1 ring-accent" : "")
+                        "flex items-center justify-center rounded p-1 text-soft hover:bg-surface hover:text-ink " +
+                        (newEmoji === name ? "bg-surface text-ink ring-1 ring-accent" : "")
                       }
                     >
-                      {e}
+                      <Icon size={14} />
                     </button>
                   ))}
                 </div>
@@ -197,8 +193,8 @@ export default function App() {
             className="w-full max-w-sm rounded-2xl border border-line bg-card p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-sm font-medium">
-              Delete "{pendingDelete.emoji} {pendingDelete.name}"?
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+              Delete "<PageIcon icon={pendingDelete.emoji} size={14} /> {pendingDelete.name}"?
             </p>
             <p className="mt-1 text-xs text-faint">
               This deletes the page and all of its blocks. It can't be undone.
