@@ -3,6 +3,7 @@ import { ChevronLeft, Plus, Settings, Trash2 } from "lucide-react";
 import type { Page } from "@/types";
 import { PAGE_ICONS, PageIcon } from "@/lib/pageIcons";
 import { Dashboard } from "@/features/dashboard/Dashboard";
+import { IntroSplash } from "@/features/intro/IntroSplash";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { GoogleConnectCard } from "@/features/sources/GoogleConnectCard";
 import { usePages } from "@/stores/pages";
@@ -18,6 +19,10 @@ export default function App() {
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("file-text");
   const [pendingDelete, setPendingDelete] = useState<Page | null>(null);
+  // First run (or after a reset): nothing in localStorage yet -> play the intro.
+  const [showIntro, setShowIntro] = useState(
+    () => !localStorage.getItem("latent-intro-seen"),
+  );
 
   useEffect(() => {
     load();
@@ -37,6 +42,17 @@ export default function App() {
     setView("page");
   }
 
+  if (showIntro) {
+    return (
+      <IntroSplash
+        onDone={() => {
+          localStorage.setItem("latent-intro-seen", "1");
+          setShowIntro(false);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full">
       <aside
@@ -53,7 +69,9 @@ export default function App() {
           >
             l
           </button>
-          {sidebarOpen && <span className="whitespace-nowrap font-semibold">latent</span>}
+          {sidebarOpen && (
+            <span className="whitespace-nowrap text-lg font-bold tracking-tight">latent</span>
+          )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={

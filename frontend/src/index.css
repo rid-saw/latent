@@ -63,6 +63,41 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* first-run intro */
+.intro-logo {
+  animation: intro-pop 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes intro-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+.intro-letter {
+  opacity: 0;
+  transform: translateX(-1.1em);
+  animation: intro-slide 480ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes intro-slide {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.intro-tag {
+  opacity: 0;
+  animation: intro-fade 700ms ease 1300ms forwards;
+}
+@keyframes intro-fade {
+  to {
+    opacity: 1;
+  }
+}
+
 /* react-grid-layout */
 .react-grid-item.react-grid-placeholder {
   border-radius: 0.75rem;
