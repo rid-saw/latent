@@ -95,23 +95,27 @@ export default function App() {
   useEffect(() => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 1500);
+    // Functional updates: StrictMode runs this effect twice in dev, and the
+    // second pass (boot id already stored) must not flip "playing" -> "done".
+    const reveal = () => setIntro((prev) => (prev === "checking" ? "done" : prev));
+    const play = () => setIntro((prev) => (prev === "checking" ? "playing" : prev));
     fetch(`${API_BASE}/health`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then(({ boot_id }) => {
         if (boot_id && localStorage.getItem("latent-boot-id") !== boot_id) {
           localStorage.setItem("latent-boot-id", boot_id);
-          setIntro("playing");
+          play();
         } else {
-          setIntro("done");
+          reveal();
         }
       })
       .catch(() => {
         // Mock mode / backend down: play once per browser.
         if (!localStorage.getItem("latent-intro-seen")) {
           localStorage.setItem("latent-intro-seen", "1");
-          setIntro("playing");
+          play();
         } else {
-          setIntro("done");
+          reveal();
         }
       })
       .finally(() => clearTimeout(timer));
