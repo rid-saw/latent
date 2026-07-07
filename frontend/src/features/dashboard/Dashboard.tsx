@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  ResponsiveGridLayout,
+  GridLayout,
   noCompactor,
   useContainerWidth,
   type LayoutItem,
@@ -104,13 +104,14 @@ export function Dashboard() {
           </div>
         ) : (
           mounted && (
-            <ResponsiveGridLayout
+            // Fixed 24-col grid at every width: shrinking the window scales
+            // columns proportionally instead of reflowing (and wrecking) the
+            // user's arrangement.
+            <GridLayout
               className="layout"
               width={width}
-              layouts={{ lg: layout, md: layout, sm: layout }}
-              breakpoints={{ lg: 1200, md: 800, sm: 0 }}
-              cols={{ lg: 24, md: 16, sm: 8 }}
-              rowHeight={40}
+              layout={layout}
+              gridConfig={{ cols: 24, rowHeight: 40 }}
               dragConfig={{ handle: ".block-drag" }}
               compactor={freeform}
               onDragStop={commitLayout}
@@ -121,7 +122,7 @@ export function Dashboard() {
                   <BlockCard block={b} />
                 </div>
               ))}
-            </ResponsiveGridLayout>
+            </GridLayout>
           )
         )}
       </div>
