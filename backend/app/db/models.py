@@ -29,6 +29,7 @@ class BlockRow(Base):
     status: Mapped[str] = mapped_column(String, default="ready")
     max_items: Mapped[int] = mapped_column(default=3)
     layout: Mapped[dict] = mapped_column(JSON)
+    layout_v: Mapped[int] = mapped_column(default=2)  # 2 = 24-col/40px grid units
     items: Mapped[list] = mapped_column(JSON, default=list)  # cached last fetch
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

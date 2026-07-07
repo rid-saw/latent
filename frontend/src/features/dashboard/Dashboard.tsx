@@ -46,8 +46,8 @@ export function Dashboard() {
     y: b.layout.y,
     w: b.layout.w,
     h: b.layout.h,
-    minW: 2,
-    minH: 2,
+    minW: 3,
+    minH: 3,
   }));
 
   // Commit layout only when the gesture ends — updating state mid-drag makes
@@ -109,8 +109,8 @@ export function Dashboard() {
               width={width}
               layouts={{ lg: layout, md: layout, sm: layout }}
               breakpoints={{ lg: 1200, md: 800, sm: 0 }}
-              cols={{ lg: 12, md: 8, sm: 4 }}
-              rowHeight={80}
+              cols={{ lg: 24, md: 16, sm: 8 }}
+              rowHeight={40}
               dragConfig={{ handle: ".block-drag" }}
               compactor={freeform}
               onDragStop={commitLayout}

@@ -28,14 +28,15 @@ _PATTERNS: list[tuple[SourceKind, re.Pattern]] = [
     ("news", re.compile(r"news|headline", re.I)),
 ]
 
+# v2 grid units: 24 cols, 40px rows (double resolution for granular resizing).
 _SIZES: dict[SourceKind, tuple[int, int]] = {
-    "youtube": (4, 6),
-    "papers": (6, 7),
-    "news": (4, 4),
-    "gmail": (3, 4),
-    "sports": (3, 3),
-    "web": (4, 4),
-    "site": (4, 4),
+    "youtube": (8, 12),
+    "papers": (12, 14),
+    "news": (8, 8),
+    "gmail": (6, 8),
+    "sports": (6, 6),
+    "web": (8, 8),
+    "site": (8, 8),
 }
 
 

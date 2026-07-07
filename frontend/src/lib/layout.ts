@@ -3,14 +3,15 @@ import type { Block, BlockLayout, SourceKind } from "@/types";
 // Default block size per content type. Video blocks need room for big 16:9
 // thumbnails; link-preview content (articles, email, news) is more compact.
 // y: Infinity → react-grid-layout appends at the bottom.
+// v2 grid units: 24 cols, 40px rows (double resolution for granular resizing).
 const sizes: Record<SourceKind, { w: number; h: number }> = {
-  youtube: { w: 4, h: 6 },
-  papers: { w: 6, h: 7 },
-  news: { w: 4, h: 4 },
-  gmail: { w: 3, h: 4 },
-  sports: { w: 3, h: 3 },
-  web: { w: 4, h: 4 },
-  site: { w: 4, h: 4 },
+  youtube: { w: 8, h: 12 },
+  papers: { w: 12, h: 14 },
+  news: { w: 8, h: 8 },
+  gmail: { w: 6, h: 8 },
+  sports: { w: 6, h: 6 },
+  web: { w: 8, h: 8 },
+  site: { w: 8, h: 8 },
 };
 
 export function defaultLayout(source: SourceKind): BlockLayout {
@@ -52,7 +53,7 @@ export function findSpot(
   w: number,
   h: number,
   occupied: BlockLayout[],
-  cols = 12,
+  cols = 24,
 ): { x: number; y: number } {
   for (let y = 0; ; y++) {
     for (let x = 0; x <= cols - w; x++) {

@@ -27,7 +27,18 @@ with engine.connect() as _conn:
         _conn.execute(
             text("INSERT INTO pages (id, name, created_at) VALUES ('default', 'Home', datetime('now'))")
         )
+    # v2 grid doubles resolution (12->24 cols, 80->40px rows); scale old layouts once.
+    _add_column("blocks", "layout_v", "layout_v INTEGER NOT NULL DEFAULT 1")
     _conn.commit()
+
+from app.db.database import SessionLocal as _SessionLocal  # noqa: E402
+from app.db.models import BlockRow as _BlockRow  # noqa: E402
+
+with _SessionLocal() as _db:
+    for _row in _db.query(_BlockRow).filter(_BlockRow.layout_v == 1).all():
+        _row.layout = {k: v * 2 for k, v in _row.layout.items()}
+        _row.layout_v = 2
+    _db.commit()
 
 app = FastAPI(title="latent API")
 

@@ -29,9 +29,9 @@ export function BlockCard({ block }: { block: Block }) {
   const isNew = (id: string) => !!freshIds?.includes(id);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-card">
-      {/* whole header is the drag handle */}
-      <header className="block-drag flex cursor-grab items-center gap-2 border-b border-line px-3 py-2 active:cursor-grabbing">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line bg-card">
+      {/* header overlays the top and appears on hover; whole header drags */}
+      <header className="block-drag pointer-events-none absolute inset-x-0 top-0 z-20 flex cursor-grab items-center gap-2 border-b border-line bg-card/95 px-3 py-2 opacity-0 backdrop-blur-sm transition-opacity duration-150 active:cursor-grabbing group-hover:pointer-events-auto group-hover:opacity-100">
         <GripVertical size={16} className="text-faint" />
         <h3 className="flex-1 truncate text-sm font-medium">{block.title}</h3>
         <span
@@ -58,7 +58,7 @@ export function BlockCard({ block }: { block: Block }) {
         </button>
       </header>
 
-      <div className="flex-1 space-y-2 overflow-auto p-3">
+      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
         {block.items.length === 0 ? (
           <p className="text-xs text-faint">No items yet.</p>
         ) : (
