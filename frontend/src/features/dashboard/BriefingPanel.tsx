@@ -26,12 +26,17 @@ export function BriefingPanel() {
 
   useEffect(() => {
     if (!briefingEnabled || !ready) return;
+    // Generation takes seconds; if the user switches pages mid-flight, the old
+    // page's briefing must not land on the new page. `stale` gates every
+    // setState after an await.
+    let stale = false;
     setBriefing(null);
     setNote(null);
     if (blockCount === 0) return; // empty page: no fetching, no generating
     api
       .getBriefing(activePageId)
       .then(async (latest) => {
+        if (stale) return;
         setBriefing(latest);
         const fresh =
           latest && Date.now() - new Date(latest.created_at).getTime() < FRESH_MS;
@@ -39,19 +44,25 @@ export function BriefingPanel() {
         autoRan.current.add(activePageId);
         setGenerating(true);
         try {
-          setBriefing(await api.generateBriefing(activePageId));
+          const generated = await api.generateBriefing(activePageId);
+          if (!stale) setBriefing(generated);
         } catch (e) {
           const msg = e instanceof Error ? e.message : "";
-          setNote(
-            msg.includes("No blocks")
-              ? "Your blocks are still empty — refresh one to fill the page."
-              : "Couldn't generate a briefing right now.",
-          );
+          if (!stale)
+            setNote(
+              msg.includes("No blocks")
+                ? "Your blocks are still empty — refresh one to fill the page."
+                : "Couldn't generate a briefing right now.",
+            );
         } finally {
-          setGenerating(false);
+          if (!stale) setGenerating(false);
         }
       })
       .catch(() => {});
+    return () => {
+      stale = true;
+      setGenerating(false); // don't leave a stale "writing…" spinner behind
+    };
   }, [briefingEnabled, activePageId, ready, blockCount]);
 
   if (!briefingEnabled) return null;

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import BlockRow
+from app.db.models import BlockRow, BriefingRow
 from app.models.schemas import Block, BlockLayout, CreateBlockRequest
 from app.services import blocks as svc
 
@@ -54,5 +54,7 @@ async def refresh_block(block_id: str, db: Session = Depends(get_db)) -> Block:
 def delete_block(block_id: str, db: Session = Depends(get_db)) -> None:
     row = db.get(BlockRow, block_id)
     if row:
+        # Invalidate the page's cached briefings — they summarized this block.
+        db.query(BriefingRow).filter(BriefingRow.page_id == row.page_id).delete()
         db.delete(row)
         db.commit()
