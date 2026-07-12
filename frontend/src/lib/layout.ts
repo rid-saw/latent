@@ -21,6 +21,7 @@ export function defaultLayout(source: SourceKind): BlockLayout {
 export const intersects = (a: BlockLayout, b: BlockLayout) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
+
 /** One-time gravity: slide each block up as far as free space allows (x kept).
  * Used after deletions so neighbors fill the vacated space. */
 export function compactUp(blocks: Block[]): {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   GridLayout,
-  noCompactor,
   useContainerWidth,
+  verticalCompactor,
   type LayoutItem,
 } from "react-grid-layout";
 import { Plus } from "lucide-react";
@@ -15,8 +15,6 @@ import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { RundownPanel } from "./RundownPanel";
 
-// Free-form: no auto-compaction, blocks stay where dropped, no overlap.
-const freeform = { ...noCompactor, preventCollision: true };
 
 export function Dashboard() {
   const { blocks, loading, load, applyLayouts } = useBlocks();
@@ -78,7 +76,15 @@ export function Dashboard() {
 
       <RundownPanel />
 
-      <div ref={containerRef} className="flex-1 overflow-auto p-2">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto p-2"
+        // Kill native HTML5 drags (links/images in cards). Mid-gesture, the
+        // hover header loses pointer-events and Chrome re-hit-tests the drag
+        // origin, finds the <a> underneath, and starts a link-drag — which
+        // silently eats all mouse events and freezes the grid drag.
+        onDragStart={(e) => e.preventDefault()}
+      >
         {loading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((i) => (
@@ -113,8 +119,11 @@ export function Dashboard() {
               width={width}
               layout={layout}
               gridConfig={{ cols: 24, rowHeight: 40, margin: [6, 6], containerPadding: [0, 0] }}
-              dragConfig={{ handle: ".block-drag" }}
-              compactor={freeform}
+              // threshold: accidental sub-10px wiggles don't start a drag.
+              dragConfig={{ handle: ".block-drag", threshold: 10 }}
+              // Magnetic grid: dragging/resizing into a neighbor pushes it away
+              // live, and blocks slide back up the moment space frees.
+              compactor={verticalCompactor}
               onDragStop={commitLayout}
               onResizeStop={commitLayout}
             >
