@@ -30,7 +30,7 @@ export function BlockCard({ block }: { block: Block }) {
   const isNew = (id: string) => !!freshIds?.includes(id);
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line bg-card">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl bg-card">
       {/* header overlays the top and appears on hover; whole header drags */}
       <header className="block-drag pointer-events-none absolute inset-x-0 top-0 z-20 flex cursor-grab items-center gap-2 border-b border-line bg-card/95 px-3 py-2 opacity-0 backdrop-blur-sm transition-opacity duration-150 active:cursor-grabbing group-hover:pointer-events-auto group-hover:opacity-100">
         <GripVertical size={16} className="text-faint" />
@@ -79,9 +79,11 @@ export function BlockCard({ block }: { block: Block }) {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-1">
+      {/* Edge-to-edge content: no card border or padding; items separated by
+          hairline dividers and clipped by the container's rounded corners. */}
+      <div className="min-h-0 flex-1 divide-y divide-line overflow-auto">
         {block.items.length === 0 ? (
-          <p className="text-xs text-faint">No items yet.</p>
+          <p className="p-3 text-xs text-faint">No items yet.</p>
         ) : (
           block.items.map((item) =>
             item.source === "youtube" ? (
@@ -105,7 +107,7 @@ function VideoCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="relative block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
+      className="relative block overflow-hidden transition hover:bg-surface/60"
     >
       {isNew && <NewBadge />}
       {item.thumbnail && (
@@ -159,7 +161,7 @@ function PaperCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="relative block overflow-hidden rounded-lg border border-line transition hover:border-faint hover:bg-surface/60"
+      className="relative block overflow-hidden transition hover:bg-surface/60"
     >
       {isNew && <NewBadge />}
       {item.thumbnail && !imgFailed ? (
@@ -199,7 +201,7 @@ function LinkPreviewCard({ item, isNew }: { item: ContentItem; isNew?: boolean }
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="relative flex gap-3 overflow-hidden rounded-lg border border-line p-2 transition hover:border-faint hover:bg-surface/60"
+      className="relative flex gap-3 overflow-hidden p-2 transition hover:bg-surface/60"
     >
       {isNew && <NewBadge />}
       {item.thumbnail && (
