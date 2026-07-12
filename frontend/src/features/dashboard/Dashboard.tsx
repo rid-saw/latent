@@ -13,7 +13,7 @@ import { useSettings } from "@/stores/settings";
 import { PageIcon } from "@/lib/pageIcons";
 import { BlockCard } from "@/components/blocks/BlockCard";
 import { CreateBlockModal } from "./CreateBlockModal";
-import { RundownPanel } from "./RundownPanel";
+import { BriefingPanel } from "./BriefingPanel";
 
 
 export function Dashboard() {
@@ -74,7 +74,7 @@ export function Dashboard() {
         </button>
       </header>
 
-      <RundownPanel />
+      <BriefingPanel />
 
       <div
         ref={containerRef}

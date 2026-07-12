@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
-import type { Rundown } from "@/types";
+import type { Briefing } from "@/types";
 import { api } from "@/api/client";
 import { useBlocks } from "@/stores/blocks";
 import { usePages } from "@/stores/pages";
@@ -8,14 +8,14 @@ import { useSettings } from "@/stores/settings";
 
 const FRESH_MS = 30 * 60 * 1000; // reuse a briefing younger than 30 min
 
-/** The Rundown: fixed strip above the grid, one per page. Hidden when disabled.
+/** The Briefing: fixed strip above the grid, one per page. Hidden when disabled.
  * Only summarizes when the page actually has blocks with content. */
-export function RundownPanel() {
-  const rundownEnabled = useSettings((s) => s.rundownEnabled);
+export function BriefingPanel() {
+  const briefingEnabled = useSettings((s) => s.briefingEnabled);
   const activePageId = usePages((s) => s.activePageId);
   const blockCount = useBlocks((s) => s.blocks.length);
   const loadedPageId = useBlocks((s) => s.loadedPageId);
-  const [rundown, setRundown] = useState<Rundown | null>(null);
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [generating, setGenerating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const autoRan = useRef(new Set<string>()); // one auto-generation per page
@@ -25,21 +25,21 @@ export function RundownPanel() {
   const ready = loadedPageId === activePageId;
 
   useEffect(() => {
-    if (!rundownEnabled || !ready) return;
-    setRundown(null);
+    if (!briefingEnabled || !ready) return;
+    setBriefing(null);
     setNote(null);
     if (blockCount === 0) return; // empty page: no fetching, no generating
     api
-      .getRundown(activePageId)
+      .getBriefing(activePageId)
       .then(async (latest) => {
-        setRundown(latest);
+        setBriefing(latest);
         const fresh =
           latest && Date.now() - new Date(latest.created_at).getTime() < FRESH_MS;
         if (fresh || autoRan.current.has(activePageId)) return;
         autoRan.current.add(activePageId);
         setGenerating(true);
         try {
-          setRundown(await api.generateRundown(activePageId));
+          setBriefing(await api.generateBriefing(activePageId));
         } catch (e) {
           const msg = e instanceof Error ? e.message : "";
           setNote(
@@ -52,14 +52,14 @@ export function RundownPanel() {
         }
       })
       .catch(() => {});
-  }, [rundownEnabled, activePageId, ready, blockCount]);
+  }, [briefingEnabled, activePageId, ready, blockCount]);
 
-  if (!rundownEnabled) return null;
+  if (!briefingEnabled) return null;
 
   if (ready && blockCount === 0) {
     return (
       <div className="mx-2 mt-2 rounded-xl border border-dashed border-line bg-card/50 p-4">
-        <p className="text-sm font-medium">The Rundown</p>
+        <p className="text-sm font-medium">Your briefing</p>
         <p className="mt-1 text-sm text-faint">
           Create a block to get started — once this page has content, your
           briefing will be written here.
@@ -71,10 +71,10 @@ export function RundownPanel() {
   return (
     <div className="mx-2 mt-2 rounded-xl border border-line bg-card p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
-        The Rundown
-        {rundown && !generating && (
+        Your briefing
+        {briefing && !generating && (
           <span className="text-xs font-normal text-faint">
-            {new Date(rundown.created_at).toLocaleString(undefined, {
+            {new Date(briefing.created_at).toLocaleString(undefined, {
               month: "short",
               day: "numeric",
               hour: "numeric",
@@ -89,8 +89,8 @@ export function RundownPanel() {
         )}
       </div>
       {note && <p className="mt-2 text-xs text-faint">{note}</p>}
-      {rundown && (
-        <p className="mt-2 text-sm leading-relaxed text-soft">{rundown.text}</p>
+      {briefing && (
+        <p className="mt-2 text-sm leading-relaxed text-soft">{briefing.text}</p>
       )}
     </div>
   );

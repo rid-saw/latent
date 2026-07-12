@@ -1,4 +1,4 @@
-import type { Block, BlockLayout, Page, Rundown } from "@/types";
+import type { Block, BlockLayout, Page, Briefing } from "@/types";
 import { mockApi } from "./mock";
 import { httpApi } from "./http";
 
@@ -14,8 +14,8 @@ export interface Api {
   refreshBlock(block: Block): Promise<Block>;
   deleteBlock(id: string): Promise<void>;
   saveLayouts(layouts: Record<string, BlockLayout>): Promise<void>;
-  getRundown(pageId: string): Promise<Rundown | null>;
-  generateRundown(pageId: string): Promise<Rundown>;
+  getBriefing(pageId: string): Promise<Briefing | null>;
+  generateBriefing(pageId: string): Promise<Briefing>;
 }
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";

@@ -1,12 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, blocks, pages, rundown
+from app.api.routes import auth, blocks, pages, briefing
 from app.config import settings
 from sqlalchemy import text
 
 from app.db import models  # noqa: F401 — register tables
 from app.db.database import Base, engine
+
+# Rename-era migration: "rundowns" -> "briefings". Must run before create_all,
+# which would otherwise create an empty "briefings" table alongside the old one.
+with engine.connect() as _conn:
+    _tables = [
+        r[0]
+        for r in _conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+    ]
+    if "rundowns" in _tables and "briefings" not in _tables:
+        _conn.execute(text("ALTER TABLE rundowns RENAME TO briefings"))
+    _conn.commit()
 
 Base.metadata.create_all(engine)
 
@@ -19,7 +30,7 @@ with engine.connect() as _conn:
 
     _add_column("blocks", "max_items", "max_items INTEGER NOT NULL DEFAULT 3")
     _add_column("blocks", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
-    _add_column("rundowns", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
+    _add_column("briefings", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
     _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT 'file-text'")
     # Emoji era -> lucide icon names; migrate known defaults once.
     _conn.execute(text("UPDATE pages SET emoji = 'home' WHERE id = 'default' AND emoji IN ('📄', '🏠')"))
@@ -54,7 +65,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(blocks.router)
 app.include_router(pages.router)
-app.include_router(rundown.router)
+app.include_router(briefing.router)
 
 
 import uuid as _uuid

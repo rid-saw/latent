@@ -1,4 +1,4 @@
-"""The Rundown: parallel per-block summarizers fan out via Send, then a
+"""The Briefing: parallel per-block summarizers fan out via Send, then a
 synthesizer writes one short briefing across everything.
 
   START -(Send per block)-> summarize_block (xN, parallel) -> synthesize -> END
@@ -24,7 +24,7 @@ Fresh items:
 In ONE punchy sentence, tell the user the single thing worth their attention here \
 (or that it's all noise). Never use em dashes; use commas or periods instead."""
 
-SYNTH_PROMPT = """Write "The Rundown" — a short morning-briefing paragraph for a \
+SYNTH_PROMPT = """Write the user's briefing, a short morning paragraph for a \
 personal dashboard, from these per-block summaries:
 
 {summaries}
@@ -35,7 +35,7 @@ information-dense, no bullets, no preamble, no sign-off. Never use em dashes \
 (the — character); use commas or periods instead."""
 
 
-class RundownState(TypedDict):
+class BriefingState(TypedDict):
     blocks: list[dict]  # [{title, query, items: [str, ...]}]
     summaries: Annotated[list[str], operator.add]
     briefing: str
@@ -46,10 +46,10 @@ class BlockSummary(BaseModel):
 
 
 class Briefing(BaseModel):
-    briefing: str = Field(description="The single-paragraph rundown")
+    briefing: str = Field(description="The single-paragraph briefing")
 
 
-def _dispatch(state: RundownState) -> list[Send]:
+def _dispatch(state: BriefingState) -> list[Send]:
     return [Send("summarize_block", {"block": b}) for b in state["blocks"]]
 
 
@@ -66,7 +66,7 @@ async def summarize_block(payload: dict) -> dict:
     return {"summaries": [f"[{block['title']}] {result.summary}"]}
 
 
-async def synthesize(state: RundownState) -> dict:
+async def synthesize(state: BriefingState) -> dict:
     result = await structured_llm(
         SYNTH_PROMPT.format(summaries="\n".join(state["summaries"])), Briefing
     )
@@ -74,8 +74,8 @@ async def synthesize(state: RundownState) -> dict:
 
 
 @lru_cache
-def get_rundown_graph():
-    g = StateGraph(RundownState)
+def get_briefing_graph():
+    g = StateGraph(BriefingState)
     g.add_node("summarize_block", summarize_block)
     g.add_node("synthesize", synthesize)
     g.add_conditional_edges(START, _dispatch, ["summarize_block"])
@@ -90,6 +90,6 @@ def _strip_em_dashes(text: str) -> str:
     return re.sub(r",\s*,", ",", text)
 
 
-async def run_rundown(blocks: list[dict]) -> str:
-    state = await get_rundown_graph().ainvoke({"blocks": blocks, "summaries": []})
+async def run_briefing(blocks: list[dict]) -> str:
+    state = await get_briefing_graph().ainvoke({"blocks": blocks, "summaries": []})
     return _strip_em_dashes(state["briefing"])

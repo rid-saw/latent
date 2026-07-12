@@ -150,15 +150,15 @@ export const mockApi: Api = {
   async saveLayouts() {
     // no-op in mock mode
   },
-  async getRundown() {
+  async getBriefing() {
     await delay(150);
     return null;
   },
-  async generateRundown() {
+  async generateBriefing() {
     await delay(1500);
     return {
       id: crypto.randomUUID(),
-      text: "Mock rundown — 3 new med-AI papers today, the Nature one on clinical LLMs is the standout. Your inbox has 2 newsletters worth opening; the rest is noise.",
+      text: "Mock briefing — 3 new med-AI papers today, the Nature one on clinical LLMs is the standout. Your inbox has 2 newsletters worth opening; the rest is noise.",
       created_at: new Date().toISOString(),
     };
   },

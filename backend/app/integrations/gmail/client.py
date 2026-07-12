@@ -19,7 +19,7 @@ _FILLER = re.compile(
 
 def _gmail_query(query: str) -> str:
     terms = " ".join(w for w in _FILLER.sub(" ", query).split() if len(w) > 1)
-    # Keep the rundown recent; fall back to unfiltered inbox if no terms remain.
+    # Keep the briefing recent; fall back to unfiltered inbox if no terms remain.
     return f"{terms} newer_than:14d".strip()
 
 

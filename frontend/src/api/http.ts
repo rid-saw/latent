@@ -1,5 +1,5 @@
 import type { Api } from "./client";
-import type { Block, BlockLayout, Page, Rundown } from "@/types";
+import type { Block, BlockLayout, Page, Briefing } from "@/types";
 
 const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -36,7 +36,7 @@ export const httpApi: Api = {
       method: "PATCH",
       body: JSON.stringify(layouts),
     }),
-  getRundown: (pageId) => req<Rundown | null>(`/api/rundown?page_id=${pageId}`),
-  generateRundown: (pageId) =>
-    req<Rundown>(`/api/rundown?page_id=${pageId}`, { method: "POST" }),
+  getBriefing: (pageId) => req<Briefing | null>(`/api/briefing?page_id=${pageId}`),
+  generateBriefing: (pageId) =>
+    req<Briefing>(`/api/briefing?page_id=${pageId}`, { method: "POST" }),
 };

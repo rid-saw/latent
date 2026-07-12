@@ -1,4 +1,4 @@
-"""Pages: named dashboards, each with its own blocks and rundown."""
+"""Pages: named dashboards, each with its own blocks and briefing."""
 
 import uuid
 
@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import BlockRow, PageRow, RundownRow
+from app.db.models import BlockRow, PageRow, BriefingRow
 from app.models.schemas import CreatePageRequest, Page, UpdatePageRequest
 
 router = APIRouter(prefix="/api/pages", tags=["pages"])
@@ -51,6 +51,6 @@ def delete_page(page_id: str, db: Session = Depends(get_db)) -> None:
     if not row:
         return
     db.query(BlockRow).filter(BlockRow.page_id == page_id).delete()
-    db.query(RundownRow).filter(RundownRow.page_id == page_id).delete()
+    db.query(BriefingRow).filter(BriefingRow.page_id == page_id).delete()
     db.delete(row)
     db.commit()

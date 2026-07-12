@@ -51,8 +51,8 @@ class BlockRow(Base):
         return cls(**block.model_dump())
 
 
-class RundownRow(Base):
-    __tablename__ = "rundowns"
+class BriefingRow(Base):
+    __tablename__ = "briefings"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     page_id: Mapped[str] = mapped_column(String, default="default")

@@ -12,8 +12,8 @@ export function SettingsPage() {
   const {
     theme,
     setTheme,
-    rundownEnabled,
-    setRundownEnabled,
+    briefingEnabled,
+    setBriefingEnabled,
     autoRefreshMins,
     setAutoRefreshMins,
   } = useSettings();
@@ -67,9 +67,9 @@ export function SettingsPage() {
           }
         />
         <Row
-          title="The Rundown"
-          description="Auto-generate the briefing when the dashboard loads."
-          control={<Switch checked={rundownEnabled} onChange={setRundownEnabled} />}
+          title="Your briefing"
+          description="Auto-generate a briefing when the dashboard loads."
+          control={<Switch checked={briefingEnabled} onChange={setBriefingEnabled} />}
           icon={<Sparkles size={15} className="text-accent" />}
         />
       </div>

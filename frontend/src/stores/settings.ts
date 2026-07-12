@@ -5,11 +5,11 @@ export type Theme = "light" | "dark";
 
 interface SettingsState {
   theme: Theme;
-  rundownEnabled: boolean; // auto-generate the briefing on load
+  briefingEnabled: boolean; // auto-generate the briefing on load
   sidebarOpen: boolean; // expanded sidebar vs collapsed icon rail
   autoRefreshMins: number; // 0 = off
   setTheme: (theme: Theme) => void;
-  setRundownEnabled: (enabled: boolean) => void;
+  setBriefingEnabled: (enabled: boolean) => void;
   setSidebarOpen: (open: boolean) => void;
   setAutoRefreshMins: (mins: number) => void;
 }
@@ -18,18 +18,25 @@ export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
       theme: "light",
-      rundownEnabled: true,
+      briefingEnabled: true,
       sidebarOpen: true,
       autoRefreshMins: 30,
       setTheme: (theme) => set({ theme }),
-      setRundownEnabled: (rundownEnabled) => set({ rundownEnabled }),
+      setBriefingEnabled: (briefingEnabled) => set({ briefingEnabled }),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setAutoRefreshMins: (autoRefreshMins) => set({ autoRefreshMins }),
     }),
     {
       name: "latent-settings",
-      version: 3, // v3: rundown is a fixed strip again, no stored layout
-      migrate: (state) => state as SettingsState,
+      version: 4, // v4: "rundown" renamed to "briefing"
+      migrate: (state) => {
+        const s = state as SettingsState & { rundownEnabled?: boolean };
+        if (s && s.rundownEnabled !== undefined && s.briefingEnabled === undefined) {
+          s.briefingEnabled = s.rundownEnabled;
+          delete s.rundownEnabled;
+        }
+        return s;
+      },
     },
   ),
 );
