@@ -99,10 +99,28 @@ body::after {
 }
 
 /* react-grid-layout */
+/* Calmer motion: neighbors glide out of the way (slower, ease-out) instead of
+   darting. The held block itself stays transition-free (RGL's
+   .react-draggable-dragging rule), so it still tracks the pointer 1:1. */
+.react-grid-item.cssTransforms {
+  transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* Mid-resize reflow: when compaction moves the resized block to another row,
+   animate the position jump instead of teleporting. Width/height are not in
+   transition-property, so the handle still tracks the pointer instantly. */
+.react-grid-item.resizing {
+  transition: transform 200ms ease-out;
+}
+/* The held block must stay glued to the pointer — re-assert RGL's no-transition
+   rule, which the .cssTransforms override above would otherwise out-cascade. */
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+}
 .react-grid-item.react-grid-placeholder {
   border-radius: 0.75rem;
   background: var(--t-accent);
   opacity: 0.15;
+  transition: transform 200ms ease-out, width 120ms ease-out, height 120ms ease-out;
 }
 .react-grid-item > .react-resizable-handle::after {
   border-color: var(--t-faint);
