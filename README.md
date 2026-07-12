@@ -6,53 +6,64 @@ out as adaptable content blocks.
 
 ## Idea
 
-- **Adaptable blocks UI.** You choose what shows up. Add, move, and resize blocks;
-  each block is a feed from a source you care about.
+- **Adaptable blocks UI.** You choose what shows up. Describe an interest in plain
+  English ("latest Fireship videos", "recent papers on AI in medicine"), and an
+  agent finds, ranks, and populates a block with it. Drag, resize, rearrange.
 - **Bring your own sources.** Connect your Google account (YouTube + Gmail in one
-  step) and the app knows where to pull from.
-- **A consolidated rundown.** Instead of ten tabs, one view that summarizes what's
-  new and worth your attention.
+  step). Papers, news, and sports come from open sources — no API keys.
+- **Your briefing.** Instead of ten tabs, one agent-written paragraph per page that
+  summarizes what's new and worth your attention.
+- **Your Claude subscription, not an API bill.** All AI runs headless through the
+  Claude Code CLI on the subscription you already have. No API key, no per-token
+  charges. (An Anthropic API key works as an optional fallback.)
 
 ## Stack
 
 | Layer     | Choice |
 |-----------|--------|
-| Frontend  | React + Vite + TypeScript + Tailwind + shadcn/ui |
-| Blocks    | react-grid-layout (drag/resize) + TanStack Query + zustand |
-| Backend   | FastAPI (Python) |
-| Agents    | LangGraph multi-agent system (supervisor → workers → critic) |
+| Frontend  | React 19 + Vite + TypeScript + Tailwind v4 |
+| Blocks    | react-grid-layout (drag/resize) + zustand |
+| Backend   | FastAPI (Python) + SQLite |
+| Agents    | LangGraph: supervisor routes → connectors fetch → critic verifies |
 | LLM       | **Your Claude subscription** via the Claude Code CLI — no API key needed |
-| Memory    | RAG over your library (vector store) |
 | Auth      | Google OAuth — one consent covers YouTube + Gmail |
 
 ## Structure
 
 ```
 frontend/   React app (the dashboard + blocks)
-backend/    FastAPI: integrations, agents, RAG, API
-  app/integrations/   where content comes FROM (youtube, gmail, …)
-  app/agents/         LangGraph multi-agent pipeline
-  app/rag/            the "what I already know" memory layer
-docs/       design notes
-scripts/    dev helpers
+backend/    FastAPI: integrations, agents, API
+  app/integrations/   where content comes FROM (youtube, gmail, papers, news, espn, …)
+  app/agents/         LangGraph agent pipeline + briefing
+scripts/    dev helpers (scripts/dev.sh runs everything)
 ```
 
 ## Getting started
 
-> Scaffolding in progress. Quickstart (install, env, run) lands with the
-> frontend + backend boilerplate.
+Prereqs: Node 20+, pnpm, Python 3.12+, uv, and the [Claude Code CLI](https://claude.com/claude-code)
+logged in to your Claude subscription.
 
-1. `cp .env.example .env` and fill in values.
-2. Frontend: `cd frontend && npm install && npm run dev`
-3. Backend: `cd backend && uv sync && uv run uvicorn app.main:app --reload`
+```sh
+./scripts/dev.sh    # starts backend (:8000) + frontend (:5173), Ctrl+C stops both
+```
 
-## Roadmap
+First run: copy `backend/.env.example` → `backend/.env` and add Google OAuth
+credentials if you want YouTube/Gmail blocks (everything else works without).
 
-- [x] Project structure
-- [ ] Frontend + backend boilerplate (runnable skeleton)
-- [ ] Adaptable blocks dashboard UI
-- [ ] Google OAuth (YouTube + Gmail)
-- [x] Source connectors → content feeds (YouTube, arXiv, Gmail, Google News, ESPN)
-- [x] LangGraph agents: supervisor routes, critic verifies — runs on your Claude subscription
-- [x] The Rundown: agent-written briefing across all your blocks (parallel fan-out)
-- [ ] User email + auth
+## What works today
+
+- [x] Multi-page dashboard: drag/resize block grid, dark mode, pages with icons
+- [x] Natural-language block creation via LangGraph agents (supervisor → fetch → critic)
+- [x] Connectors: YouTube, Gmail, papers (OpenAlex/arXiv), Google News, ESPN, pinned sites
+- [x] Your briefing: agent-written page summary (one LLM call per briefing)
+- [x] Auto-refresh, NEW badges, runs entirely on your Claude subscription
+- [ ] Multi-user auth
+- [ ] RAG memory ("what I've read") for personalization
+
+## License
+
+[PolyForm Noncommercial 1.0.0](LICENSE.md). You're welcome to clone this, run it,
+learn from it, and modify it for personal or research use. Commercial use is not
+permitted.
+
+Required Notice: Copyright Riddhi Sawant (https://github.com/rid-saw/latent)
