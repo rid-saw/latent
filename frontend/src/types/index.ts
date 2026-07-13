@@ -7,6 +7,7 @@ export type SourceKind =
   | "papers"
   | "news"
   | "sports"
+  | "jobs"
   | "web"
   | "site";
 

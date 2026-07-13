@@ -14,14 +14,20 @@ terms for that source's API.
 Sources: youtube (videos), papers (research across arXiv/Nature/journals via \
 Semantic Scholar; include publication names in search terms if the user names one), \
 gmail (the user's own inbox), news (Google News, any topic), sports (ESPN leagues: \
-NBA/NFL/MLB/NHL/soccer/F1/golf), web (generic — resolved via news search).
+NBA/NFL/MLB/NHL/soccer/F1/golf), jobs (job listings via Seek, AU/NZ; search_terms = \
+role keywords only, put any city/region in location), web (generic — resolved via \
+news search).
 
 User request: {query}"""
 
 
 class Plan(BaseModel):
-    source: Literal["youtube", "gmail", "papers", "news", "sports", "web"]
+    source: Literal["youtube", "gmail", "papers", "news", "sports", "jobs", "web"]
     search_terms: str = Field(description="Concise search terms for the source API")
+    location: str = Field(
+        default="",
+        description="For jobs only: city/region if the user named one, else empty",
+    )
     title: str = Field(description="Short block title, max 5 words")
     max_items: int = Field(
         ge=1,
@@ -40,6 +46,7 @@ async def supervisor_node(state: BlockAgentState) -> dict:
     return {
         "source": plan.source,
         "search_terms": plan.search_terms,
+        "location": plan.location,
         "title": plan.title,
         "max_items": plan.max_items,
         "wants_latest": plan.wants_latest,

@@ -12,6 +12,7 @@ function inferSource(q: string): SourceKind {
   if (/(paper|arxiv|research|study|journal)/.test(s)) return "papers";
   if (/(youtube|video|channel)/.test(s)) return "youtube";
   if (/(email|inbox|newsletter|gmail)/.test(s)) return "gmail";
+  if (/(jobs?\b|hiring|vacanc|internship|career)/.test(s)) return "jobs";
   if (/(sport|nba|nfl|soccer|football|match)/.test(s)) return "sports";
   if (/(news|headline)/.test(s)) return "news";
   return "web";

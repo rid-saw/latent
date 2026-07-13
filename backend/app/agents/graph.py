@@ -15,6 +15,7 @@ from app.integrations.espn.client import search_sports
 from app.integrations.papers.client import search_papers
 from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
+from app.integrations.seek.client import search_jobs
 from app.integrations.youtube.client import search_videos
 
 MAX_ROUNDS = 2
@@ -35,6 +36,13 @@ async def fetch_node(state: BlockAgentState) -> dict:
     n = state.get("max_items", 3)
     if source == "youtube":
         items = await search_videos(terms, max_results=n, latest=state.get("wants_latest", False))
+    elif source == "jobs":
+        items = await search_jobs(
+            terms,
+            max_results=n,
+            location=state.get("location", ""),
+            latest=state.get("wants_latest", False),
+        )
     elif connector := _CONNECTORS.get(source):
         items = await connector(terms, max_results=n)
     else:

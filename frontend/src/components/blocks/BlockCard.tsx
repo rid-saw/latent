@@ -10,6 +10,7 @@ const sourceStyle: Record<SourceKind, string> = {
   gmail: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   news: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
   sports: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  jobs: "bg-teal-500/15 text-teal-700 dark:text-teal-300",
   web: "bg-stone-500/15 text-stone-600 dark:text-stone-300",
   site: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
 };

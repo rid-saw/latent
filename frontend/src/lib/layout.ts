@@ -10,6 +10,7 @@ const sizes: Record<SourceKind, { w: number; h: number }> = {
   news: { w: 8, h: 8 },
   gmail: { w: 6, h: 8 },
   sports: { w: 6, h: 6 },
+  jobs: { w: 8, h: 10 },
   web: { w: 8, h: 8 },
   site: { w: 8, h: 8 },
 };

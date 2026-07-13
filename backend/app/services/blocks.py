@@ -14,6 +14,7 @@ from app.integrations.espn.client import search_sports
 from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
 from app.integrations.papers.client import search_papers
+from app.integrations.seek.client import search_jobs
 from app.integrations.website.client import fetch_site
 from app.integrations.youtube.client import search_videos
 
@@ -24,6 +25,7 @@ _PATTERNS: list[tuple[SourceKind, re.Pattern]] = [
     ("papers", re.compile(r"paper|arxiv|research|study|journal", re.I)),
     ("youtube", re.compile(r"youtube|video|channel", re.I)),
     ("gmail", re.compile(r"email|inbox|newsletter|gmail", re.I)),
+    ("jobs", re.compile(r"\bjobs?\b|hiring|vacanc|internship|grad program|position|career", re.I)),
     ("sports", re.compile(r"sport|nba|nfl|soccer|football|match", re.I)),
     ("news", re.compile(r"news|headline", re.I)),
 ]
@@ -35,6 +37,7 @@ _SIZES: dict[SourceKind, tuple[int, int]] = {
     "news": (8, 8),
     "gmail": (6, 8),
     "sports": (6, 6),
+    "jobs": (8, 10),
     "web": (8, 8),
     "site": (8, 8),
 }
@@ -76,6 +79,8 @@ async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> lis
         return await search_messages(query, max_results=max_items)
     if source == "news":
         return await search_news(query, max_results=max_items)
+    if source == "jobs":
+        return await search_jobs(query, max_results=max_items)
     if source == "sports":
         return await search_sports(query, max_results=max_items)
     if source == "web":

@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-SourceKind = Literal["youtube", "gmail", "papers", "news", "sports", "web", "site"]
+SourceKind = Literal["youtube", "gmail", "papers", "news", "sports", "jobs", "web", "site"]
 BlockStatus = Literal["idle", "loading", "ready", "error"]
 
 
