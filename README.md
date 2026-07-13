@@ -13,9 +13,10 @@ out as adaptable content blocks.
   step). Papers, news, and sports come from open sources — no API keys.
 - **Your briefing.** Instead of ten tabs, one agent-written paragraph per page that
   summarizes what's new and worth your attention.
-- **Your Claude subscription, not an API bill.** All AI runs headless through the
-  Claude Code CLI on the subscription you already have. No API key, no per-token
-  charges. (An Anthropic API key works as an optional fallback.)
+- **Your AI subscription, not an API bill.** All AI runs headless through the CLI
+  of whichever provider you already use — Claude (Claude Code), ChatGPT (Codex
+  CLI), or Gemini (Gemini CLI, free with a Google account). No API key, no
+  per-token charges. (An Anthropic API key works as an optional fallback.)
 
 ## Stack
 
@@ -25,7 +26,7 @@ out as adaptable content blocks.
 | Blocks    | react-grid-layout (drag/resize) + zustand |
 | Backend   | FastAPI (Python) + SQLite |
 | Agents    | LangGraph: supervisor routes → connectors fetch → critic verifies |
-| LLM       | **Your Claude subscription** via the Claude Code CLI — no API key needed |
+| LLM       | **Your AI subscription** — Claude, ChatGPT, or Gemini via their CLIs; no API key |
 | Auth      | Google OAuth — one consent covers YouTube + Gmail |
 
 ## Structure
@@ -40,8 +41,10 @@ scripts/    dev helpers (scripts/dev.sh runs everything)
 
 ## Getting started
 
-Prereqs: Node 20+, pnpm, Python 3.12+, uv, and the [Claude Code CLI](https://claude.com/claude-code)
-logged in to your Claude subscription.
+Prereqs: Node 20+, pnpm, Python 3.12+, uv, and ONE of these CLIs logged in:
+[Claude Code](https://claude.com/claude-code) (Claude subscription),
+[Codex CLI](https://developers.openai.com/codex) (ChatGPT subscription), or
+[Gemini CLI](https://github.com/google-gemini/gemini-cli) (free Google account).
 
 ```sh
 ./scripts/dev.sh    # starts backend (:8000) + frontend (:5173), Ctrl+C stops both
