@@ -10,7 +10,8 @@ out as adaptable content blocks.
   English ("latest Fireship videos", "recent papers on AI in medicine"), and an
   agent finds, ranks, and populates a block with it. Drag, resize, rearrange.
 - **Bring your own sources.** Connect your Google account (YouTube + Gmail in one
-  step). Papers, news, and sports come from open sources — no API keys.
+  step). Papers, news, sports, and job listings (via Seek — AU/NZ roles) come
+  from open sources — no API keys.
 - **Your briefing.** Instead of ten tabs, one agent-written paragraph per page that
   summarizes what's new and worth your attention.
 - **Your AI subscription, not an API bill.** All AI runs headless through the CLI
@@ -52,17 +53,6 @@ Prereqs: Node 20+, pnpm, Python 3.12+, uv, and ONE of these CLIs logged in:
 
 First run: copy `.env.example` → `.env` (repo root) and add Google OAuth
 credentials if you want YouTube/Gmail blocks (everything else works without).
-
-## What works today
-
-- [x] Multi-page dashboard: drag/resize block grid, dark mode, pages with icons
-- [x] Natural-language block creation via LangGraph agents (supervisor → fetch → critic)
-- [x] Connectors: YouTube, Gmail, papers (OpenAlex/arXiv), Google News, ESPN,
-      job listings (via Seek — Australia/NZ roles only for now), pinned sites
-- [x] Your briefing: agent-written page summary (one LLM call per briefing)
-- [x] Auto-refresh, NEW badges, runs entirely on your AI subscription
-- [ ] Multi-user auth
-- [ ] RAG memory ("what I've read") for personalization
 
 ## License
 
