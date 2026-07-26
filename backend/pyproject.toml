@@ -1,7 +1,7 @@
 [project]
 name = "latent-backend"
 version = "0.0.0"
-description = "latent API — integrations, agents, RAG"
+description = "latent API — integrations, agents"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

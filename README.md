@@ -50,16 +50,17 @@ Prereqs: Node 20+, pnpm, Python 3.12+, uv, and ONE of these CLIs logged in:
 ./scripts/dev.sh    # starts backend (:8000) + frontend (:5173), Ctrl+C stops both
 ```
 
-First run: copy `backend/.env.example` → `backend/.env` and add Google OAuth
+First run: copy `.env.example` → `.env` (repo root) and add Google OAuth
 credentials if you want YouTube/Gmail blocks (everything else works without).
 
 ## What works today
 
 - [x] Multi-page dashboard: drag/resize block grid, dark mode, pages with icons
 - [x] Natural-language block creation via LangGraph agents (supervisor → fetch → critic)
-- [x] Connectors: YouTube, Gmail, papers (OpenAlex/arXiv), Google News, ESPN, pinned sites
+- [x] Connectors: YouTube, Gmail, papers (OpenAlex/arXiv), Google News, ESPN,
+      job listings (via Seek — Australia/NZ roles only for now), pinned sites
 - [x] Your briefing: agent-written page summary (one LLM call per briefing)
-- [x] Auto-refresh, NEW badges, runs entirely on your Claude subscription
+- [x] Auto-refresh, NEW badges, runs entirely on your AI subscription
 - [ ] Multi-user auth
 - [ ] RAG memory ("what I've read") for personalization
 
