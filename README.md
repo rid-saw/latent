@@ -4,6 +4,8 @@ A single, streamlined dashboard for everything you need to keep up with — news
 academic papers, YouTube, sports — pulled from the sources *you* connect and laid
 out as adaptable content blocks.
 
+![latent dashboard demo](docs/demo.gif)
+
 ## Idea
 
 - **Adaptable blocks UI.** You choose what shows up. Describe an interest in plain
