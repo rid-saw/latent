@@ -32,6 +32,9 @@ data/
 # ── Private working context (not for the repo) ──
 CLAUDE.md
 
+# ── Recordings (raw demo footage) ─────────────
+*.mov
+
 # ── Logs ──────────────────────────────────────
 *.log
 npm-debug.log*
