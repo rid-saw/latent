@@ -1,5 +1,6 @@
 """Google News RSS — query-able news, any topic, no key required."""
 
+import html
 import re
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
@@ -12,7 +13,10 @@ FEED_URL = "https://news.google.com/rss/search"
 
 
 def _strip_html(text: str) -> str:
-    return re.sub(r"<[^>]+>", "", text).strip()
+    # Unescape entities (&nbsp;, &amp;, …) left in RSS descriptions, and
+    # collapse the non-breaking spaces they decode into.
+    text = re.sub(r"<[^>]+>", "", text)
+    return re.sub(r"[\s ]+", " ", html.unescape(text)).strip()
 
 
 async def search_news(query: str, max_results: int = 5) -> list[ContentItem]:
