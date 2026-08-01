@@ -6,6 +6,7 @@ import { Dashboard } from "@/features/dashboard/Dashboard";
 import { IntroSplash } from "@/features/intro/IntroSplash";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { GoogleConnectCard } from "@/features/sources/GoogleConnectCard";
+import { Toaster } from "@/components/ui/Toaster";
 import { usePages } from "@/stores/pages";
 import { useSettings } from "@/stores/settings";
 
@@ -125,6 +126,7 @@ export default function App() {
     <div className="flex h-full">
       {intro === "checking" && <div className="fixed inset-0 z-50 bg-bg" />}
       {intro === "playing" && <IntroSplash onDone={() => setIntro("done")} />}
+      <Toaster />
 
       <aside
         className={
