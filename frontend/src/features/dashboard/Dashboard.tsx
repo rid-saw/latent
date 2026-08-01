@@ -5,7 +5,7 @@ import {
   verticalCompactor,
   type LayoutItem,
 } from "react-grid-layout";
-import { Plus } from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
 import type { BlockLayout } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { usePages } from "@/stores/pages";
@@ -17,7 +17,7 @@ import { BriefingPanel } from "./BriefingPanel";
 
 
 export function Dashboard() {
-  const { blocks, loading, load, applyLayouts } = useBlocks();
+  const { blocks, loading, loadError, load, applyLayouts } = useBlocks();
   const { pages, activePageId } = usePages();
   const [showCreate, setShowCreate] = useState(false);
   const { width, containerRef, mounted } = useContainerWidth();
@@ -98,6 +98,17 @@ export function Dashboard() {
                 <div className="h-3 w-3/5 rounded bg-surface" />
               </div>
             ))}
+          </div>
+        ) : loadError && blocks.length === 0 ? (
+          <div className="mx-auto mt-24 max-w-md text-center">
+            <AlertCircle size={20} className="mx-auto text-red-500" />
+            <p className="mt-3 text-sm text-soft">{loadError}</p>
+            <button
+              onClick={() => load()}
+              className="mt-3 rounded-lg border border-line px-3 py-1.5 text-sm text-soft hover:text-ink"
+            >
+              Try again
+            </button>
           </div>
         ) : blocks.length === 0 ? (
           <div className="mt-24 text-center">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GripVertical, RefreshCw, X } from "lucide-react";
+import { AlertCircle, GripVertical, RefreshCw, X } from "lucide-react";
 import type { Block, ContentItem, SourceKind } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { cn } from "@/lib/cn";
@@ -83,8 +83,18 @@ export function BlockCard({ block }: { block: Block }) {
       {/* Edge-to-edge content: no card border or padding; items separated by
           hairline dividers and clipped by the container's rounded corners. */}
       <div className="min-h-0 flex-1 divide-y divide-line overflow-auto">
-        {block.items.length === 0 ? (
-          <p className="p-3 text-xs text-faint">No items yet.</p>
+        {block.status === "error" && block.items.length === 0 ? (
+          <BlockError onRetry={() => refresh(block.id)} />
+        ) : block.items.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 p-3 text-center">
+            <p className="text-xs text-faint">Nothing here yet.</p>
+            <button
+              onClick={() => refresh(block.id)}
+              className="text-xs text-soft underline underline-offset-4 hover:text-ink"
+            >
+              Fetch content
+            </button>
+          </div>
         ) : (
           block.items.map((item) =>
             item.source === "youtube" ? (
@@ -97,6 +107,25 @@ export function BlockCard({ block }: { block: Block }) {
           )
         )}
       </div>
+    </div>
+  );
+}
+
+/** Shown when a block's last fetch failed — always with a way out. */
+function BlockError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
+      <AlertCircle size={18} className="text-red-500" />
+      <p className="text-xs leading-relaxed text-soft">
+        Couldn't load this one. The source may be busy, or it needs a connected
+        account.
+      </p>
+      <button
+        onClick={onRetry}
+        className="mt-1 rounded-lg border border-line px-3 py-1.5 text-xs text-soft hover:text-ink"
+      >
+        Try again
+      </button>
     </div>
   );
 }
