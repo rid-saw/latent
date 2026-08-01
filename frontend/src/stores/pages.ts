@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Page } from "@/types";
 import { api } from "@/api/client";
+import { friendlyError } from "@/lib/errors";
+import { toast } from "./toasts";
 
 interface PagesState {
   pages: Page[];
@@ -13,6 +15,8 @@ interface PagesState {
   setActive: (id: string) => void;
 }
 
+// As in the blocks store: these never throw. The sidebar is the first thing
+// that renders, so a failure here must not take the whole app down with it.
 export const usePages = create<PagesState>()(
   persist(
     (set, get) => ({
@@ -20,7 +24,13 @@ export const usePages = create<PagesState>()(
       activePageId: "default",
 
       async load() {
-        const pages = await api.listPages();
+        let pages: Page[];
+        try {
+          pages = await api.listPages();
+        } catch (e) {
+          toast(friendlyError(e));
+          return;
+        }
         const active = pages.some((p) => p.id === get().activePageId)
           ? get().activePageId
           : (pages[0]?.id ?? "default");
@@ -28,17 +38,30 @@ export const usePages = create<PagesState>()(
       },
 
       async add(name, emoji) {
-        const page = await api.createPage(name, emoji);
-        set((s) => ({ pages: [...s.pages, page], activePageId: page.id }));
+        try {
+          const page = await api.createPage(name, emoji);
+          set((s) => ({ pages: [...s.pages, page], activePageId: page.id }));
+        } catch (e) {
+          toast(friendlyError(e));
+        }
       },
 
       async update(id, name, emoji) {
-        const page = await api.updatePage(id, name, emoji);
-        set((s) => ({ pages: s.pages.map((p) => (p.id === id ? page : p)) }));
+        try {
+          const page = await api.updatePage(id, name, emoji);
+          set((s) => ({ pages: s.pages.map((p) => (p.id === id ? page : p)) }));
+        } catch (e) {
+          toast(friendlyError(e));
+        }
       },
 
       async remove(id) {
-        await api.deletePage(id);
+        try {
+          await api.deletePage(id);
+        } catch (e) {
+          toast(friendlyError(e));
+          return;
+        }
         set((s) => {
           const pages = s.pages.filter((p) => p.id !== id);
           return {
