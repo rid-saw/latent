@@ -1,6 +1,7 @@
 import type { Api } from "./client";
 import type { Block, BlockLayout, Page, Briefing } from "@/types";
 import { ApiError, readDetail } from "@/lib/errors";
+import { revalidateGoogle } from "@/stores/auth";
 
 const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -26,7 +27,12 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
       timedOut ? 408 : 0,
     );
   }
-  if (!res.ok) throw new ApiError(await readDetail(res), res.status);
+  if (!res.ok) {
+    // A 401 means the Google connection just died under us — re-check it so
+    // the sidebar stops claiming "connected" while blocks are failing.
+    if (res.status === 401) revalidateGoogle();
+    throw new ApiError(await readDetail(res), res.status);
+  }
   return res.status === 204 ? (undefined as T) : res.json();
 }
 

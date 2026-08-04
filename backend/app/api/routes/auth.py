@@ -22,8 +22,21 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 
 @router.get("/status")
-def status() -> dict:
-    return {"google": load_tokens() is not None}
+async def status() -> dict:
+    """Whether Google actually works — not just whether a token file exists.
+
+    Google expires refresh tokens after 7 days while the OAuth app is in
+    "Testing", so a stored token is no evidence of a live connection. Checking
+    the file alone reported "connected" against month-old dead credentials,
+    and the UI then hid the reconnect button the user needed.
+    """
+    if load_tokens() is None:
+        return {"google": False, "reason": "not_connected"}
+    try:
+        await get_access_token()  # probes, and silently refreshes if it can
+    except HTTPException:
+        return {"google": False, "reason": "expired"}
+    return {"google": True, "reason": "connected"}
 
 
 @router.get("/google/login")

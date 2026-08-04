@@ -1,31 +1,45 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, Link2 } from "lucide-react";
+import { useEffect } from "react";
+import { AlertTriangle, CheckCircle2, Link2 } from "lucide-react";
+import { useAuth } from "@/stores/auth";
 
 const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const mock = import.meta.env.VITE_USE_MOCK !== "false";
 
-/** Sidebar card: connect Google (one consent = YouTube + Gmail) or show status. */
+const LOGIN_URL = `${base}/api/auth/google/login`;
+
+/** Sidebar card: connect Google (one consent = YouTube + Gmail) or show status.
+ *
+ * Connected is a clean statement with nothing to click — the status endpoint
+ * verifies against Google, so there's no reason to offer a fix for a problem
+ * the user doesn't have. If the token dies later, a 401 anywhere revalidates
+ * the store and this flips to "expired" on its own.
+ */
 export function GoogleConnectCard() {
-  const [connected, setConnected] = useState<boolean | null>(null);
+  const status = useAuth((s) => s.google);
+  const check = useAuth((s) => s.check);
 
   useEffect(() => {
-    if (mock) return;
-    fetch(`${base}/api/auth/status`)
-      .then((r) => r.json())
-      .then((s) => setConnected(s.google))
-      .catch(() => setConnected(false));
-  }, []);
+    check();
+  }, [check]);
 
   if (mock) {
     return (
       <div className="mt-auto rounded-lg border border-line p-3 text-xs text-faint">
-        Mock mode. Set <code className="text-soft">VITE_USE_MOCK=false</code>{" "}
-        and run the backend for real content.
+        Mock mode. Set <code className="text-soft">VITE_USE_MOCK=false</code> and
+        run the backend for real content.
       </div>
     );
   }
 
-  if (connected) {
+  if (status === "checking") {
+    return (
+      <div className="mt-auto rounded-lg border border-line p-3 text-xs text-faint">
+        Checking Google…
+      </div>
+    );
+  }
+
+  if (status === "connected") {
     return (
       <div className="mt-auto flex items-center gap-2 rounded-lg border border-line p-3 text-xs text-emerald-600 dark:text-emerald-400">
         <CheckCircle2 size={14} /> Google connected (YouTube + Gmail)
@@ -33,9 +47,23 @@ export function GoogleConnectCard() {
     );
   }
 
+  if (status === "expired") {
+    return (
+      <a
+        href={LOGIN_URL}
+        className="mt-auto block rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs hover:border-amber-500/70"
+      >
+        <p className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
+          <AlertTriangle size={14} /> Google connection expired
+        </p>
+        <p className="mt-1 text-soft">Reconnect to use YouTube and inbox blocks.</p>
+      </a>
+    );
+  }
+
   return (
     <a
-      href={`${base}/api/auth/google/login`}
+      href={LOGIN_URL}
       className="mt-auto flex items-center gap-2 rounded-lg border border-line bg-surface p-3 text-xs text-ink hover:border-faint"
     >
       <Link2 size={14} /> Connect Google — YouTube + Gmail in one step

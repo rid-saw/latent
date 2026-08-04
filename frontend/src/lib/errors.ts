@@ -40,7 +40,8 @@ export function friendlyError(e: unknown): string {
     case 0:
       return "Can't reach latent's backend. Is it running? Start it with ./scripts/dev.sh";
     case 401:
-      return "Connect your Google account first — Settings → Connect Google. Inbox and YouTube blocks need it.";
+      // The card lives at the bottom of the sidebar, not in Settings.
+      return "Your Google connection isn't working. Reconnect from the card at the bottom of the sidebar — YouTube and inbox blocks need it.";
     case 404:
       return "That's already gone — it may have been deleted in another tab.";
     case 408:
