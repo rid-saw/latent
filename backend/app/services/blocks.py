@@ -7,8 +7,11 @@ Mirrors frontend inference (src/api/mock.ts) and layout defaults
 import logging
 import re
 import uuid
+from collections.abc import AsyncIterator
 
 from fastapi import HTTPException
+
+from app.services import progress
 
 from app.integrations.espn.client import search_sports
 from app.integrations.gmail.client import search_messages
@@ -142,6 +145,63 @@ async def create_block(query: str) -> Block:
         layout=default_layout(source),
         items=items,
         status=status,
+        max_items=max_items,
+    )
+
+
+async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]]:
+    """create_block, narrated. Yields ("progress", line) … then ("block", Block).
+
+    Progress comes from the graph's own node updates, so a line is only shown
+    once the step it describes has actually happened.
+    """
+    from app.agents.llm import agents_enabled  # lazy: avoid import cycle
+
+    if _URL_RE.search(query) or not agents_enabled():
+        # Both are single-fetch paths with nothing to narrate beyond the fetch.
+        source = "site" if _URL_RE.search(query) else infer_source(query)
+        yield "progress", progress.searching(source, query if source != "site" else "")
+        yield "block", await create_block(query)
+        return
+
+    from app.agents.graph import MAX_ROUNDS, get_graph
+
+    yield "progress", progress.routing()
+    state: dict = {}
+    try:
+        async for chunk in get_graph().astream(
+            {"query": query, "iterations": 0}, stream_mode="updates"
+        ):
+            for node, update in chunk.items():
+                state.update(update)
+                source = state.get("source", "web")
+                if node == "supervisor":
+                    yield "progress", progress.searching(source, state["search_terms"])
+                elif node == "fetch":
+                    yield "progress", progress.reviewing(source, len(state.get("items") or []))
+                elif node == "critic" and not state.get("approved"):
+                    # Only narrate a refinement that's actually about to happen.
+                    if state.get("iterations", 0) < MAX_ROUNDS:
+                        yield "progress", progress.refining(state["search_terms"])
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("agent stream failed; falling back to regex inference")
+        yield "block", await create_block(query)
+        return
+
+    max_items = state.get("max_items") or default_max_items(state.get("source", "web"))
+    items = (state.get("items") or [])[:max_items]
+    yield "progress", progress.finishing(state.get("source", "web"), len(items))
+    yield "block", Block(
+        id=str(uuid.uuid4()),
+        title=state.get("title") or title_from(query),
+        query=query,
+        search_terms=state.get("search_terms") or "",
+        source=state.get("source", "web"),
+        layout=default_layout(state.get("source", "web")),
+        items=items,
+        status="ready",
         max_items=max_items,
     )
 
