@@ -12,6 +12,7 @@ import { usePages } from "@/stores/pages";
 import { useSettings } from "@/stores/settings";
 import { PageIcon } from "@/lib/pageIcons";
 import { BlockCard } from "@/components/blocks/BlockCard";
+import { DemoBadge } from "@/components/ui/DemoBadge";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { BriefingPanel } from "./BriefingPanel";
 
@@ -66,12 +67,15 @@ export function Dashboard() {
           <PageIcon icon={page?.emoji ?? "file-text"} size={18} />
           {page?.name ?? "Dashboard"}
         </h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-medium text-bg hover:opacity-90"
-        >
-          <Plus size={16} /> Create block
-        </button>
+        <div className="flex items-center gap-2.5">
+          <DemoBadge />
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-medium text-bg hover:opacity-90"
+          >
+            <Plus size={16} /> Create block
+          </button>
+        </div>
       </header>
 
       <BriefingPanel />

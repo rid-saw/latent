@@ -1,10 +1,13 @@
 # latent
 
+**▶ [Try it live](https://rid-saw.github.io/latent)** — runs in your browser,
+nothing to install. Sample content; connect your own sources by running it locally.
+
 A single, streamlined dashboard for everything you need to keep up with — news,
 academic papers, YouTube, sports — pulled from the sources *you* connect and laid
 out as adaptable content blocks.
 
-![latent dashboard demo](docs/demo.gif)
+[![latent dashboard demo](docs/demo.gif)](https://rid-saw.github.io/latent)
 
 ## Idea
 

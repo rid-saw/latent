@@ -23,7 +23,14 @@ export function GoogleConnectCard() {
   }, [check]);
 
   if (mock) {
-    return (
+    // The demo has no backend to connect anything to. Visitors get the pitch;
+    // developers running with the mock flag get the instruction.
+    return import.meta.env.VITE_DEMO ? (
+      <div className="mt-auto rounded-lg border border-line p-3 text-xs text-faint">
+        Everything here is sample content. Run latent yourself to connect your
+        own inbox, YouTube and sources.
+      </div>
+    ) : (
       <div className="mt-auto rounded-lg border border-line p-3 text-xs text-faint">
         Mock mode. Set <code className="text-soft">VITE_USE_MOCK=false</code> and
         run the backend for real content.
