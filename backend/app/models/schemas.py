@@ -35,7 +35,10 @@ class Block(BaseModel):
     id: str
     page_id: str = "default"
     title: str
-    query: str
+    query: str  # what the user typed, verbatim
+    # What the supervisor decided to actually search for. Kept so refreshes
+    # reuse the agent's routing instead of re-sending the raw sentence.
+    search_terms: str = ""
     source: SourceKind
     layout: BlockLayout
     items: list[ContentItem]

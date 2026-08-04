@@ -154,11 +154,17 @@ async def _create_block_agentic(query: str) -> Block:
         state = await run_block_agent(query)
         source: SourceKind = state["source"]
         max_items = state.get("max_items") or default_max_items(source)
-        items = state.get("items") or []
+        # The graph over-fetches so the critic has slack to prune; the block
+        # shows only what the user asked for, newest first.
+        items = (state.get("items") or [])[:max_items]
         return Block(
             id=str(uuid.uuid4()),
             title=state.get("title") or title_from(query),
             query=query,
+            # Persist the supervisor's routing so refreshes reuse it. Without
+            # this, every refresh re-searched with the user's raw sentence and
+            # quietly replaced good results with junk.
+            search_terms=state.get("search_terms") or "",
             source=source,
             layout=default_layout(source),
             items=items,

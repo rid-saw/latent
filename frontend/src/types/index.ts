@@ -41,6 +41,7 @@ export interface Block {
   page_id: string;
   title: string;
   query: string; // the natural-language prompt the user typed
+  search_terms?: string; // what the agent actually searched for; reused on refresh
   source: SourceKind;
   layout: BlockLayout;
   items: ContentItem[];

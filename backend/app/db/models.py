@@ -25,6 +25,7 @@ class BlockRow(Base):
     page_id: Mapped[str] = mapped_column(String, default="default")
     title: Mapped[str] = mapped_column(String)
     query: Mapped[str] = mapped_column(String)
+    search_terms: Mapped[str] = mapped_column(String, default="")
     source: Mapped[str] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="ready")
     max_items: Mapped[int] = mapped_column(default=3)
@@ -40,7 +41,7 @@ class BlockRow(Base):
             {
                 c: getattr(self, c)
                 for c in (
-                    "id", "page_id", "title", "query", "source",
+                    "id", "page_id", "title", "query", "search_terms", "source",
                     "status", "max_items", "layout", "items",
                 )
             }

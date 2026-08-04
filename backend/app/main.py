@@ -29,6 +29,8 @@ with engine.connect() as _conn:
             _conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
 
     _add_column("blocks", "max_items", "max_items INTEGER NOT NULL DEFAULT 3")
+    # Blocks predating this column refresh with their raw query (see below).
+    _add_column("blocks", "search_terms", "search_terms TEXT NOT NULL DEFAULT ''")
     _add_column("blocks", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
     _add_column("briefings", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
     _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT 'file-text'")
