@@ -126,9 +126,26 @@ export const mockApi: Api = {
     await delay(150);
     return seed.filter((b) => b.page_id === pageId).map((b) => ({ ...b }));
   },
-  async createBlock(query, pageId) {
-    await delay(600);
+  async createBlock(query, pageId, onProgress) {
     const source = inferSource(query);
+    // Mirrors the real agent's steps so mock mode demos the same experience,
+    // just faster — no LLM behind it.
+    const place: Record<string, string> = {
+      gmail: "your inbox",
+      papers: "research papers",
+      youtube: "YouTube",
+      news: "the news",
+      sports: "scores and fixtures",
+      jobs: "job listings",
+      web: "the web",
+      site: "that page",
+    };
+    onProgress?.("Working out where to look…");
+    await delay(700);
+    onProgress?.(`Searching ${place[source] ?? "the web"} for “${query}”`);
+    await delay(700);
+    onProgress?.("Reviewing 3 results");
+    await delay(600);
     return {
       id: crypto.randomUUID(),
       page_id: pageId,

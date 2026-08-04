@@ -10,7 +10,12 @@ export interface Api {
   updatePage(id: string, name: string, emoji: string): Promise<Page>;
   deletePage(id: string): Promise<void>;
   listBlocks(pageId: string): Promise<Block[]>;
-  createBlock(query: string, pageId: string): Promise<Block>;
+  /** onProgress receives the agent's steps as they happen (~47s of work). */
+  createBlock(
+    query: string,
+    pageId: string,
+    onProgress?: (message: string) => void,
+  ): Promise<Block>;
   refreshBlock(block: Block): Promise<Block>;
   deleteBlock(id: string): Promise<void>;
   saveLayouts(layouts: Record<string, BlockLayout>): Promise<void>;

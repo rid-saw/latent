@@ -19,6 +19,7 @@ interface BlocksState {
   loadError: string | null; // page-level failure (backend down, etc.)
   loadedPageId: string | null; // which page the current blocks belong to
   creating: boolean;
+  progress: string[]; // the agent's steps for the block being created
   freshIds: Record<string, string[]>; // per block: item ids unseen before now
   load: () => Promise<void>;
   /** Resolves to an error message the caller should show, or null on success. */
@@ -37,6 +38,7 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   loadError: null,
   loadedPageId: null,
   creating: false,
+  progress: [],
   freshIds: {},
 
   async load() {
@@ -70,14 +72,17 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   },
 
   async create(query) {
-    set({ creating: true });
+    set({ creating: true, progress: [] });
     let block: Block;
     try {
-      block = await api.createBlock(query, activePageId());
+      block = await api.createBlock(query, activePageId(), (message) =>
+        set((s) => ({ progress: [...s.progress, message] })),
+      );
     } catch (e) {
       // The modal stays open and shows this, so the typed query isn't lost.
       return friendlyError(e);
     } finally {
+      // Progress survives a failure so the modal can show how far it got.
       set({ creating: false });
     }
     // Reading order: first free spot left->right, wrapping to the next row.

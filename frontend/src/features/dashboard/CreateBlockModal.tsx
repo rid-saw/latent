@@ -1,6 +1,41 @@
-import { useState } from "react";
-import { AlertCircle, Loader2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, Check, Loader2, X } from "lucide-react";
 import { useBlocks } from "@/stores/blocks";
+
+/** The agent's steps, streamed live. Creating a block runs two LLM calls and
+ *  takes ~47s; the elapsed counter keeps something moving through the long
+ *  silences while a single step is still thinking. */
+function AgentProgress({ steps, running }: { steps: string[]; running: boolean }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!running) return;
+    const started = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+
+  if (!steps.length) return null;
+
+  return (
+    <ol className="mt-3 space-y-1.5 rounded-lg border border-line bg-bg p-3">
+      {steps.map((step, i) => {
+        const current = running && i === steps.length - 1;
+        return (
+          <li key={`${i}-${step}`} className="flex items-start gap-2 text-xs">
+            {current ? (
+              <Loader2 size={13} className="mt-px shrink-0 animate-spin text-accent" />
+            ) : (
+              <Check size={13} className="mt-px shrink-0 text-emerald-600" />
+            )}
+            <span className={current ? "text-ink" : "text-soft"}>{step}</span>
+            {current && <span className="ml-auto shrink-0 tabular-nums text-faint">{elapsed}s</span>}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 const examples = [
   "Recent papers on AI and medicine",
@@ -11,6 +46,7 @@ const examples = [
 
 export function CreateBlockModal({ onClose }: { onClose: () => void }) {
   const { create, creating } = useBlocks();
+  const progress = useBlocks((s) => s.progress);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +92,8 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
           placeholder="e.g. Recent high-traffic papers on AI in medicine"
           className="w-full resize-none rounded-lg border border-line bg-bg p-3 text-sm outline-none focus:border-accent"
         />
+
+        <AgentProgress steps={progress} running={creating} />
 
         {error && (
           <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-2.5">
