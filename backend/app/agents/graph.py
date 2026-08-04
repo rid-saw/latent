@@ -30,10 +30,18 @@ _CONNECTORS = {
 }
 
 
+# The critic drops off-topic items, so fetching exactly max_items leaves the
+# block short whenever it prunes anything. Over-fetch and trim afterwards:
+# these connectors are free and keyless, and the critic reads one list either
+# way, so a wider net costs no extra requests.
+OVERFETCH = 3
+MAX_FETCH = 15
+
+
 async def fetch_node(state: BlockAgentState) -> dict:
     source = state["source"]
     terms = state["search_terms"]
-    n = state.get("max_items", 3)
+    n = min(state.get("max_items", 3) * OVERFETCH, MAX_FETCH)
     if source == "youtube":
         items = await search_videos(terms, max_results=n, latest=state.get("wants_latest", False))
     elif source == "jobs":
@@ -47,7 +55,21 @@ async def fetch_node(state: BlockAgentState) -> dict:
         items = await connector(terms, max_results=n)
     else:
         items = []
-    return {"items": items, "iterations": state.get("iterations", 0) + 1}
+
+    round_n = state.get("iterations", 0) + 1
+    prev = state.get("items") or []
+    # A refinement that returns less than the round before it made things
+    # worse. Keep the better set and the terms that found it: those terms are
+    # persisted on the block and reused by every later refresh, so accepting a
+    # regression here breaks the block permanently, not just once.
+    if round_n > 1 and len(items) < len(prev):
+        return {
+            "items": prev,
+            "search_terms": state.get("prev_terms") or terms,
+            "iterations": round_n,
+            "regressed": True,
+        }
+    return {"items": items, "prev_terms": terms, "iterations": round_n}
 
 
 def _after_critic(state: BlockAgentState) -> str:

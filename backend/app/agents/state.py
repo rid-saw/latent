@@ -14,3 +14,5 @@ class BlockAgentState(TypedDict, total=False):
     items: list[ContentItem]
     approved: bool        # critic verdict
     iterations: int       # fetch rounds completed (reflection loop guard)
+    prev_terms: str       # terms that produced the items currently held
+    regressed: bool       # a refinement returned less than the round before it
