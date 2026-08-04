@@ -75,8 +75,19 @@ async def structured_llm(prompt: str, schema: type[BaseModel]) -> BaseModel:
     )
 
 
-def _schema_prompt(prompt: str, schema: type[BaseModel]) -> str:
+def _schema_prompt(prompt: str, schema: type[BaseModel], insist: bool = False) -> str:
+    # Without an explicit framing the CLIs sometimes read the prompt as
+    # something being *shown* to them and reply conversationally ("What would
+    # you like me to do?"), which parses as nothing. `insist` is the retry's
+    # blunter phrasing.
+    lead = (
+        "Output the JSON object and nothing else. Do not ask questions, do not "
+        "explain, do not acknowledge this message.\n\n"
+        if insist
+        else ""
+    )
     return (
+        f"{lead}Complete the following task and return the result as JSON.\n\n"
         f"{prompt}\n\n"
         "Respond with ONLY a JSON object matching this schema — no prose, no code fences:\n"
         f"{json.dumps(schema.model_json_schema())}"
