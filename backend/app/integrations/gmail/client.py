@@ -1,7 +1,6 @@
-"""Gmail API (readonly) — recent messages matching a block query."""
+"""Gmail API (readonly) — the N most recent messages matching a block query."""
 
 import asyncio
-import re
 from email.utils import parsedate_to_datetime
 
 import httpx
@@ -11,31 +10,25 @@ from app.models.schemas import ContentItem
 
 BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
-# Words that describe the *ask*, not the search ("newsletters about X in my inbox").
-_FILLER = re.compile(
-    r"\b(emails?|inbox|newsletters?|gmail|my|in|about|from|the|recent|latest|new)\b", re.I
-)
-
-
-def _gmail_query(query: str) -> str:
-    terms = " ".join(w for w in _FILLER.sub(" ", query).split() if len(w) > 1)
-    # Keep the briefing recent; fall back to unfiltered inbox if no terms remain.
-    return f"{terms} newer_than:14d".strip()
-
 
 def _from_name(raw: str) -> str:
     # 'Some Sender <a@b.com>' -> 'Some Sender'
     return raw.split("<")[0].strip().strip('"') or raw
 
 
-async def search_messages(query: str, max_results: int = 5) -> list[ContentItem]:
+async def search_messages(query: str, max_results: int = 3) -> list[ContentItem]:
     token = await get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     async with httpx.AsyncClient(timeout=15, headers=headers) as client:
+        # Gmail lists newest-first, so the first N matches are the N most
+        # recent. No date window: the count *is* the recency control, and a
+        # fixed window hid everything whenever a sender went quiet for a
+        # fortnight. max_results comes from the user ("5 most recent…"),
+        # defaulting to 3.
         resp = await client.get(
             f"{BASE}/messages",
-            params={"q": _gmail_query(query), "maxResults": max_results},
+            params={"q": query.strip(), "maxResults": max_results},
         )
         resp.raise_for_status()
         refs = resp.json().get("messages", [])

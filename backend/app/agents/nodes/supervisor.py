@@ -18,6 +18,20 @@ NBA/NFL/MLB/NHL/soccer/F1/golf), jobs (job listings via Seek, AU/NZ; search_term
 role keywords only, put any city/region in location), web (generic — resolved via \
 news search).
 
+For gmail: search_terms is a Gmail search query, not a description of one. \
+Gmail requires EVERY word to appear in the message, so use the fewest, most \
+distinctive words. Always drop words describing the request rather than its \
+content ("emails", "my", "inbox", "recent") and casual abbreviations that \
+won't appear verbatim ("uni").
+
+Then pick ONE form:
+- Mail FROM a person or organisation -> Gmail's sender operator, using their \
+real domain: "monash uni emails" and "emails from monash uni" both -> \
+"from:monash.edu". Never a bare name here — that also matches job alerts and \
+newsletters merely mentioning them, which is not what "from" means.
+- Mail ABOUT a topic -> plain keywords: "emails about my enrolment" -> \
+"enrolment".
+
 User request: {query}"""
 
 
