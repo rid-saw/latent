@@ -47,8 +47,16 @@ const examples = [
 export function CreateBlockModal({ onClose }: { onClose: () => void }) {
   const { create, creating } = useBlocks();
   const progress = useBlocks((s) => s.progress);
+  const resetProgress = useBlocks((s) => s.resetProgress);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Progress lives in the store so it survives re-renders during a create.
+  // That means it also survives the modal closing, so clear it on open;
+  // otherwise the previous block's steps greet you on a blank form.
+  useEffect(() => {
+    resetProgress();
+  }, [resetProgress]);
 
   async function submit() {
     if (!query.trim() || creating) return;

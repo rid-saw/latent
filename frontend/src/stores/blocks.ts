@@ -24,6 +24,7 @@ interface BlocksState {
   load: () => Promise<void>;
   /** Resolves to an error message the caller should show, or null on success. */
   create: (query: string) => Promise<string | null>;
+  resetProgress: () => void;
   remove: (id: string) => Promise<void>;
   refresh: (id: string) => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -91,6 +92,10 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     set((s) => ({ blocks: [...s.blocks, placed] }));
     persistLayouts({ [placed.id]: placed.layout });
     return null;
+  },
+
+  resetProgress() {
+    set({ progress: [] });
   },
 
   async remove(id) {
