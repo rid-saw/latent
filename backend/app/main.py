@@ -36,10 +36,16 @@ with engine.connect() as _conn:
     _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT 'file-text'")
     # Emoji era -> lucide icon names; migrate known defaults once.
     _conn.execute(text("UPDATE pages SET emoji = 'home' WHERE id = 'default' AND emoji IN ('📄', '🏠')"))
-    # Ensure the default page exists so existing blocks have a home.
+    # Ensure the default page exists so blocks have a home. emoji is spelled
+    # out because on a fresh database create_all builds the column from the
+    # model, where the default is Python-side and so never reaches the table:
+    # omitting it here crashed every first run on NOT NULL.
     if not _conn.execute(text("SELECT 1 FROM pages WHERE id = 'default'")).first():
         _conn.execute(
-            text("INSERT INTO pages (id, name, created_at) VALUES ('default', 'Home', datetime('now'))")
+            text(
+                "INSERT INTO pages (id, name, emoji, created_at)"
+                " VALUES ('default', 'Home', 'home', datetime('now'))"
+            )
         )
     # v2 grid doubles resolution (12->24 cols, 80->40px rows); scale old layouts once.
     _add_column("blocks", "layout_v", "layout_v INTEGER NOT NULL DEFAULT 1")
