@@ -18,6 +18,7 @@ from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
 from app.integrations.papers.client import search_papers
 from app.integrations.seek.client import search_jobs
+from app.integrations.websearch.client import search_web
 from app.integrations.website.client import fetch_site
 from app.integrations.youtube.client import search_videos
 
@@ -87,7 +88,7 @@ async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> lis
     if source == "sports":
         return await search_sports(query, max_results=max_items)
     if source == "web":
-        return await search_news(query, max_results=max_items)  # keyless generic proxy
+        return await search_web(query, max_results=max_items)
 
 
 async def safe_fetch(

@@ -16,6 +16,7 @@ from app.integrations.papers.client import search_papers
 from app.integrations.gmail.client import search_messages
 from app.integrations.news.client import search_news
 from app.integrations.seek.client import search_jobs
+from app.integrations.websearch.client import search_web
 from app.integrations.youtube.client import search_videos
 
 MAX_ROUNDS = 2
@@ -26,7 +27,7 @@ _CONNECTORS = {
     "gmail": search_messages,
     "news": search_news,
     "sports": search_sports,
-    "web": search_news,
+    "web": search_web,
 }
 
 

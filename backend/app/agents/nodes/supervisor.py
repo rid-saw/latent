@@ -13,10 +13,20 @@ terms for that source's API.
 
 Sources: youtube (videos), papers (research across arXiv/Nature/journals via \
 Semantic Scholar; include publication names in search terms if the user names one), \
-gmail (the user's own inbox), news (Google News, any topic), sports (ESPN leagues: \
-NBA/NFL/MLB/NHL/soccer/F1/golf), jobs (job listings via Seek, AU/NZ; search_terms = \
-role keywords only, put any city/region in location), web (generic — resolved via \
-news search).
+gmail (the user's own inbox), news (Google News: current events and headlines, \
+what just happened), sports (ESPN leagues: NBA/NFL/MLB/NHL/soccer/F1/golf), jobs \
+(job listings via Seek, AU/NZ; search_terms = role keywords only, put any \
+city/region in location), web (a real web search, for everything else).
+
+Choosing between news and web is the call you will get wrong most often. Pick \
+news only when the user wants recent events reported as news: "NBA trade news", \
+"election results", "what happened at the budget". Pick web for everything \
+else, including topics that merely sound newsworthy: how something works, \
+reviews and comparisons, background on a subject, documentation, ongoing \
+conditions. "australian housing market" is web, not news, because the user \
+wants to understand the market rather than read this week's headlines about \
+it. When both could fit, prefer web: it can return news articles, but news \
+cannot return anything else.
 
 For gmail: search_terms is a Gmail search query, not a description of one. \
 Gmail requires EVERY word to appear in the message, so use the fewest, most \

@@ -58,11 +58,33 @@ def agents_enabled() -> bool:
     return pick_backend() is not None
 
 
-async def structured_llm(prompt: str, schema: type[BaseModel]) -> BaseModel:
-    """Prompt -> validated pydantic object, whichever backend is available."""
+class WebSearchUnavailable(RuntimeError):
+    """This backend can't search the web; the caller should fall back."""
+
+
+# Claude Code and Gemini ship their own web search. Codex is unverified, and
+# the API fallback would need the server-side search tool wired up separately.
+_WEB_CAPABLE = {"claude-code", "gemini"}
+
+
+def web_search_supported() -> bool:
+    return pick_backend() in _WEB_CAPABLE
+
+
+async def structured_llm(
+    prompt: str, schema: type[BaseModel], web: bool = False
+) -> BaseModel:
+    """Prompt -> validated pydantic object, whichever backend is available.
+
+    `web=True` lets the model search the web while answering. Backends that
+    can't raise WebSearchUnavailable rather than quietly answering from memory,
+    because a confidently fabricated URL is worse than no result.
+    """
     backend = pick_backend()
+    if web and backend not in _WEB_CAPABLE:
+        raise WebSearchUnavailable(f"{backend or 'no backend'} cannot search the web")
     if backend == "claude-code":
-        return await _via_claude_code(prompt, schema)
+        return await _via_claude_code(prompt, schema, web=web)
     if backend == "codex":
         return await _via_codex(prompt, schema)
     if backend == "gemini":
@@ -114,10 +136,16 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
-async def _via_claude_code(prompt: str, schema: type[BaseModel]) -> BaseModel:
+async def _via_claude_code(
+    prompt: str, schema: type[BaseModel], web: bool = False
+) -> BaseModel:
     args = [cli_path("claude"), "-p", _schema_prompt(prompt, schema), "--output-format", "json"]
     if settings.llm_model:
         args += ["--model", settings.llm_model]
+    if web:
+        # Headless runs can't answer a permission prompt, so the tools have to
+        # be granted up front or every search is silently denied.
+        args += ["--allowedTools", "WebSearch", "WebFetch"]
     stdout, _ = await _run(args)
     result_text = json.loads(stdout).get("result", "")
     return schema.model_validate(_extract_json(result_text))
