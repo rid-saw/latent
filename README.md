@@ -1,5 +1,7 @@
 # latent
 
+[![CI](https://github.com/rid-saw/latent/actions/workflows/ci.yml/badge.svg)](https://github.com/rid-saw/latent/actions/workflows/ci.yml)
+
 **▶ [Try it live](https://rid-saw.github.io/latent)** in your browser, nothing to
 install. Sample content; connect your own sources by running it locally.
 
