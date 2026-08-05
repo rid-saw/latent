@@ -88,17 +88,6 @@ async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> lis
         return await search_sports(query, max_results=max_items)
     if source == "web":
         return await search_news(query, max_results=max_items)  # keyless generic proxy
-    # Other connectors land in later slices; return an honest placeholder.
-    return [
-        ContentItem(
-            id=str(uuid.uuid4()),
-            title=f"'{source}' connector coming soon",
-            url="https://example.com",
-            source=source,
-            summary=f"Real {source} content lands in a later slice. YouTube works today.",
-            meta="latent · stub",
-        )
-    ]
 
 
 async def safe_fetch(
