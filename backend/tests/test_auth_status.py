@@ -55,3 +55,5 @@ async def test_missing_tokens_raise_401(token_store):
     with pytest.raises(HTTPException) as caught:
         await auth.get_access_token()
     assert caught.value.status_code == 401
+
+
