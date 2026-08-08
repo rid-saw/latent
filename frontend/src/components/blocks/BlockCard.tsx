@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertCircle, GripVertical, RefreshCw, X } from "lucide-react";
 import type { Block, ContentItem, SourceKind } from "@/types";
 import { useBlocks } from "@/stores/blocks";
@@ -32,10 +32,31 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
   const loading = block.status === "loading";
   const isNew = (id: string) => !!freshIds?.includes(id);
 
+  // Reading the block is the point, so the header gets out of the way while
+  // you scroll down and comes back the moment you scroll up. Direction rather
+  // than position, so you never have to scroll to the top to reach it.
+  const [hidden, setHidden] = useState(false);
+  const lastY = useRef(0);
+
+  function onScroll(e: React.UIEvent<HTMLDivElement>) {
+    const y = e.currentTarget.scrollTop;
+    const moved = y - lastY.current;
+    if (Math.abs(moved) < 4) return; // ignore jitter and rubber-banding
+    lastY.current = y;
+    setHidden(y > 4 && moved > 0);
+  }
+
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl bg-card">
-      {/* header overlays the top and appears on hover; whole header drags */}
-      <header className="block-drag pointer-events-none absolute inset-x-0 top-0 z-20 flex cursor-grab items-center gap-2 border-b border-line bg-card/95 px-3 py-2 opacity-0 backdrop-blur-sm transition-opacity duration-150 active:cursor-grabbing group-hover:pointer-events-auto group-hover:opacity-100">
+      {/* Always visible, overlaying the top; the whole bar is the drag handle. */}
+      <header
+        className={cn(
+          "block-drag absolute inset-x-0 top-0 z-20 flex h-9 cursor-grab items-center gap-2",
+          "border-b border-line bg-card px-3",
+          "transition-transform duration-200 active:cursor-grabbing",
+          hidden && "-translate-y-full",
+        )}
+      >
         <GripVertical size={16} className="text-faint" />
         <h3 className="flex-1 truncate text-sm font-medium">{block.title}</h3>
         <span
@@ -88,7 +109,11 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
 
       {/* Edge-to-edge content: no card border or padding; items separated by
           hairline dividers and clipped by the container's rounded corners. */}
-      <div className="min-h-0 flex-1 divide-y divide-line overflow-auto">
+      {/* pt-9 clears the header at rest; it scrolls away with the content. */}
+      <div
+        onScroll={onScroll}
+        className="min-h-0 flex-1 divide-y divide-line overflow-auto pt-9"
+      >
         {block.status === "error" && block.items.length === 0 ? (
           <BlockError onRetry={() => refresh(block.id)} />
         ) : block.items.length === 0 ? (
