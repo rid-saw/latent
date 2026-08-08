@@ -99,24 +99,61 @@ scripts/    dev helpers (scripts/dev.sh runs everything)
 
 ## Getting started
 
-Prereqs: Node 20+, pnpm, Python 3.12+, uv, and ONE of these CLIs:
-[Claude Code](https://claude.com/claude-code) (Claude subscription),
+### 1. Install the tools
+
+Four, plus one AI CLI. On macOS:
+
+```sh
+brew install node python uv     # runtimes + the Python package manager
+npm install -g pnpm             # the Node package manager
+```
+
+Elsewhere: [Node 20+](https://nodejs.org), [Python 3.12+](https://python.org),
+then
+
+```sh
+curl -LsSf https://astral.sh/uv/install.sh | sh   # uv
+npm install -g pnpm                               # pnpm
+```
+
+Check they're all there:
+
+```sh
+node -v && pnpm -v && python3 -V && uv --version
+```
+
+<sub>**pnpm** is npm's job done differently. latent uses it because it blocks
+package install scripts by default, which is the main way a compromised
+dependency runs code on your machine. **uv** is the same idea for Python:
+faster than pip, and it pins an exact dependency tree.</sub>
+
+### 2. Sign in to an AI CLI
+
+ONE of [Claude Code](https://claude.com/claude-code) (Claude subscription),
 [Codex CLI](https://developers.openai.com/codex) (ChatGPT subscription), or
 [Gemini CLI](https://github.com/google-gemini/gemini-cli) (free Google account).
 
-**Sign in to that CLI once** before running latent: install it, run it
-(`claude`, `codex` or `gemini`), and log in with your existing account. latent
-never sees that credential. It shells out to whichever CLI it finds on your
-PATH and inherits the session. Skip this step and blocks still work, but
-routing falls back to keyword matching instead of the agent.
+Install it, then **run it once and log in** with the account you already have:
 
 ```sh
-./scripts/dev.sh    # starts backend (:8000) + frontend (:5173), Ctrl+C stops both
+npm install -g @anthropic-ai/claude-code
+claude          # opens a browser; log in, then quit with /exit
 ```
 
-Papers, news, sports, jobs and web search work straight away. YouTube and Gmail
-need a Google account connected: copy `.env.example` to `.env` (repo root) and
-follow [docs/oauth-setup.md](docs/oauth-setup.md) for the credentials.
+latent never sees that credential. It shells out to whichever CLI is on your
+PATH and inherits the session. Skip this step and blocks still fill, but
+routing falls back to keyword matching instead of the agent.
+
+### 3. Run it
+
+```sh
+./scripts/dev.sh    # backend on :8000, frontend on :5173, Ctrl+C stops both
+```
+
+Open http://localhost:5173. Papers, news, sports, jobs and web search work
+immediately. YouTube and Gmail read your own account, so they need Google
+credentials: copy `.env.example` to `.env` (repo root) and follow
+[docs/oauth-setup.md](docs/oauth-setup.md).
 
 ## License
 
