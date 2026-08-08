@@ -139,6 +139,32 @@ async def create_block(query: str) -> Block:
     )
 
 
+def placeholder_block(query: str, status: str = "loading") -> Block:
+    """The block as it exists before the agent has decided anything.
+
+    Written to the database the moment creation starts, so the prompt is safe
+    from everything that follows: a dropped connection, a killed browser, a
+    backend restart. The agent then updates this same row rather than
+    inserting at the end.
+
+    Source is a keyword guess, good enough to size the card until routing
+    replaces it. search_terms stays empty, which is also the signal that a
+    retry must re-run the agent rather than refetch — there is nothing to
+    refetch until routing has happened.
+    """
+    source: SourceKind = "site" if _URL_RE.search(query) else infer_source(query)
+    return Block(
+        id=str(uuid.uuid4()),
+        title=title_from(query),
+        query=query,
+        source=source,
+        layout=default_layout(source),
+        items=[],
+        status=status,  # type: ignore[arg-type]
+        max_items=default_max_items(source),
+    )
+
+
 def _block_from(state: dict, query: str, status: str) -> Block:
     source: SourceKind = state.get("source", "web")
     max_items = state.get("max_items") or default_max_items(source)

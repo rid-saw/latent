@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AlertCircle, GripVertical, RefreshCw, X } from "lucide-react";
+import { AlertCircle, GripVertical, Loader2, RefreshCw, X } from "lucide-react";
 import type { Block, ContentItem, SourceKind } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { cn } from "@/lib/cn";
@@ -26,7 +26,8 @@ function NewBadge() {
 /** `readOnly` is for the preview of a block still being built: it has no
  *  server id yet, so refreshing or deleting it would act on nothing. */
 export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolean }) {
-  const { refresh, remove } = useBlocks();
+  // `retry` picks refetch or re-route; the card doesn't need to know which.
+  const { retry, remove } = useBlocks();
   const freshIds = useBlocks((s) => s.freshIds[block.id]);
   const [confirming, setConfirming] = useState(false);
   const loading = block.status === "loading";
@@ -70,7 +71,7 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
         {!readOnly && (
           <>
             <button
-              onClick={() => refresh(block.id)}
+              onClick={() => retry(block.id)}
               className="text-faint hover:text-ink"
               title="Refresh"
             >
@@ -114,13 +115,20 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
         onScroll={onScroll}
         className="min-h-0 flex-1 divide-y divide-line overflow-auto pt-9"
       >
-        {block.status === "error" && block.items.length === 0 ? (
-          <BlockError onRetry={() => refresh(block.id)} />
+        {loading && block.items.length === 0 ? (
+          // Empty and working. Without this it falls through to the empty
+          // state and says "Nothing here yet" while the agent is mid-run.
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+            <Loader2 size={16} className="animate-spin text-accent" />
+            <p className="text-xs text-faint">Loading…</p>
+          </div>
+        ) : block.status === "error" && block.items.length === 0 ? (
+          <BlockError query={block.query} onRetry={() => retry(block.id)} />
         ) : block.items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 p-3 text-center">
             <p className="text-xs text-faint">Nothing here yet.</p>
             <button
-              onClick={() => refresh(block.id)}
+              onClick={() => retry(block.id)}
               className="text-xs text-soft underline underline-offset-4 hover:text-ink"
             >
               Fetch content
@@ -142,11 +150,14 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
   );
 }
 
-/** Shown when a block's last fetch failed — always with a way out. */
-function BlockError({ onRetry }: { onRetry: () => void }) {
+/** Shown when a block's last fetch failed — always with a way out.
+ *  The query is echoed because a failed block is saved and reloaded: coming
+ *  back to it later, what you asked for is the thing you need to see. */
+function BlockError({ query, onRetry }: { query: string; onRetry: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
       <AlertCircle size={18} className="text-red-500" />
+      <p className="line-clamp-3 text-xs italic leading-relaxed text-faint">"{query}"</p>
       <p className="text-xs leading-relaxed text-soft">
         Couldn't load this one. The source may be busy, or it needs a connected
         account.

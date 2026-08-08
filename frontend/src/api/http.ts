@@ -55,16 +55,20 @@ function parseFrame(frame: string): { event: string; data: Record<string, unknow
  * every caller handles them identically to a normal request.
  */
 async function streamBlock(
-  query: string,
-  pageId: string,
-  on?: { progress?: (message: string) => void; preview?: (block: Block) => void },
+  path: string,
+  body: unknown,
+  on?: {
+    created?: (block: Block) => void;
+    progress?: (message: string) => void;
+    preview?: (block: Block) => void;
+  },
 ): Promise<Block> {
   let res: Response;
   try {
-    res = await fetch(`${base}/api/blocks/stream`, {
+    res = await fetch(`${base}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, page_id: pageId }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (e) {
@@ -94,7 +98,9 @@ async function streamBlock(
     for (const frame of frames) {
       const parsed = parseFrame(frame);
       if (!parsed) continue;
-      if (parsed.event === "progress") {
+      if (parsed.event === "created") {
+        on?.created?.(parsed.data as unknown as Block);
+      } else if (parsed.event === "progress") {
         on?.progress?.(String(parsed.data.message ?? ""));
       } else if (parsed.event === "preview") {
         on?.preview?.(parsed.data as unknown as Block);
@@ -103,7 +109,13 @@ async function streamBlock(
       } else if (parsed.event === "error") {
         const status = Number(parsed.data.status) || 500;
         if (status === 401) revalidateGoogle();
-        throw new ApiError(String(parsed.data.detail ?? "Block creation failed"), status);
+        // parsed.data carries the block the backend saved, so the caller can
+        // put it on the grid instead of losing the query with the error.
+        throw new ApiError(
+          String(parsed.data.detail ?? "Block creation failed"),
+          status,
+          parsed.data,
+        );
       }
     }
   }
@@ -122,7 +134,9 @@ export const httpApi: Api = {
     }),
   deletePage: (id) => req<void>(`/api/pages/${id}`, { method: "DELETE" }),
   listBlocks: (pageId) => req<Block[]>(`/api/blocks?page_id=${pageId}`),
-  createBlock: (query, pageId, on) => streamBlock(query, pageId, on),
+  createBlock: (query, pageId, on) =>
+    streamBlock("/api/blocks/stream", { query, page_id: pageId }, on),
+  rebuildBlock: (id, on) => streamBlock(`/api/blocks/${id}/rebuild`, {}, on),
   refreshBlock: (block) =>
     req<Block>(`/api/blocks/${block.id}/refresh`, { method: "POST" }),
   deleteBlock: (id) => req<void>(`/api/blocks/${id}`, { method: "DELETE" }),

@@ -243,6 +243,7 @@ export const mockApi: Api = {
       max_items: 3,
     });
 
+    on?.created?.(block("loading"));
     on?.progress?.("Working out where to look…");
     await delay(700);
     on?.progress?.(`Searching ${place[source] ?? "the web"} for “${query}”`);
@@ -251,6 +252,11 @@ export const mockApi: Api = {
     on?.preview?.(block("loading")); // raw results, before the critic
     await delay(900);
     return block("ready");
+  },
+  async rebuildBlock(id, on) {
+    // Same shape as createBlock; the mock has no rows, so it just replays.
+    const block = seed.find((b) => b.id === id);
+    return this.createBlock(block?.query ?? "rebuilt block", block?.page_id ?? "default", on);
   },
   async refreshBlock(block) {
     await delay(500);

@@ -5,11 +5,14 @@
  * The UI never shows the raw failure — it shows what to do about it.
  */
 
-/** A failed request. `status` is the HTTP code, or 0 if we never reached the backend. */
+/** A failed request. `status` is the HTTP code, or 0 if we never reached the
+ *  backend. `data` carries anything the failure came with — block creation
+ *  sends back the block it saved, so the prompt isn't lost with the error. */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly data?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -29,6 +32,22 @@ export async function readDetail(res: Response): Promise<string> {
   }
   return body.slice(0, 200);
 }
+
+export const OFFLINE = "You're offline. Reconnect and try again.";
+
+/** Whether the browser is *certain* there is no network.
+ *
+ * Only the false case is trustworthy: `onLine === true` merely means an
+ * interface exists, so it still reads true on a hotel wifi you haven't logged
+ * into. That asymmetry is fine here, because this is only used to skip work
+ * that is guaranteed to fail — a wrong "online" just means waiting as usual.
+ *
+ * Worth skipping: the provider CLIs retry internally for about three minutes
+ * before giving up, and creating a block makes more than one call. Reading
+ * this costs nothing; the browser keeps it up to date from the OS.
+ */
+export const isOffline = () =>
+  typeof navigator !== "undefined" && navigator.onLine === false;
 
 /** Human-readable message for anything thrown while calling the API. */
 export function friendlyError(e: unknown): string {

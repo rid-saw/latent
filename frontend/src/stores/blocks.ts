@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Block, BlockLayout } from "@/types";
 import { api } from "@/api/client";
-import { friendlyError } from "@/lib/errors";
+import { ApiError, OFFLINE, friendlyError, isOffline } from "@/lib/errors";
 import { compactUp, findSpot } from "@/lib/layout";
 import { diffAndRecord, forgetBlock } from "@/lib/seen";
 import { toast } from "./toasts";
@@ -16,7 +16,9 @@ const activePageId = () => usePages.getState().activePageId;
 /** A block being built. Lives on the grid so the dashboard stays usable while
  *  the agent works, and so a failure has somewhere to be reported. */
 export interface PendingBlock {
-  id: string; // local only; the real block gets a server id
+  id: string; // local only, for React keys
+  created: Block | null; // the row the backend wrote; null until it says so
+  pageId: string; // which page it belongs to, so it doesn't follow you around
   query: string;
   steps: string[]; // agent progress, newest last
   preview: Block | null; // raw results, before the critic has judged them
@@ -38,6 +40,8 @@ interface BlocksState {
   retryPending: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   refresh: (id: string) => Promise<void>;
+  /** Try again on a failed block. Picks refetch or re-route for you. */
+  retry: (id: string) => Promise<void>;
   refreshAll: () => Promise<void>;
   applyLayouts: (layouts: Record<string, BlockLayout>) => void;
 }
@@ -60,7 +64,11 @@ export const useBlocks = create<BlocksState>((set, get) => ({
       blocks = await api.listBlocks(pageId);
     } catch (e) {
       // Keep whatever is on screen; show the reason instead of an endless skeleton.
-      set({ loading: false, loadError: friendlyError(e), loadedPageId: pageId });
+      set({
+        loading: false,
+        loadError: friendlyError(e),
+        loadedPageId: pageId,
+      });
       return;
     }
     // Free-form grid (no compaction): normalize legacy "place at bottom"
@@ -69,14 +77,26 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     const fixed: Record<string, Block["layout"]> = {};
     for (const b of blocks) {
       if (b.layout.y >= 1000) {
-        b.layout = { ...b.layout, ...findSpot(b.layout.w, b.layout.h, occupied) };
+        b.layout = {
+          ...b.layout,
+          ...findSpot(b.layout.w, b.layout.h, occupied),
+        };
         occupied.push(b.layout);
         fixed[b.id] = b.layout;
       }
     }
+    // A row left at "loading" was interrupted: the browser driving it is
+    // gone, so nothing will ever finish it. Shown as failed, which is true
+    // and puts a Try again in front of the user.
+    for (const b of blocks) {
+      if (b.status === "loading") b.status = "error";
+    }
     const freshIds: Record<string, string[]> = {};
     for (const b of blocks) {
-      freshIds[b.id] = diffAndRecord(b.id, b.items.map((i) => i.id));
+      freshIds[b.id] = diffAndRecord(
+        b.id,
+        b.items.map((i) => i.id),
+      );
     }
     set({ blocks, loading: false, loadedPageId: pageId, freshIds });
     if (Object.keys(fixed).length) persistLayouts(fixed);
@@ -85,16 +105,34 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   async create(query) {
     // Reading order: first free spot left->right, wrapping to the next row.
     // Claimed up front so the finished block lands where the card already is.
-    const occupied = [...occupiedLayouts(get().blocks), ...get().pending.map((p) => p.layout)];
-    const layout = { ...PENDING_SIZE, ...findSpot(PENDING_SIZE.w, PENDING_SIZE.h, occupied) };
+    const occupied = [
+      ...occupiedLayouts(get().blocks),
+      ...get().pending.map((p) => p.layout),
+    ];
+    const layout = {
+      ...PENDING_SIZE,
+      ...findSpot(PENDING_SIZE.w, PENDING_SIZE.h, occupied),
+    };
     const id = `${PENDING_PREFIX}${crypto.randomUUID()}`;
     set((s) => ({
       pending: [
         ...s.pending,
-        { id, query, steps: [], preview: null, error: null, layout, resized: false },
+        {
+          id,
+          created: null,
+          pageId: activePageId(),
+          query,
+          steps: [],
+          preview: null,
+          error: null,
+          layout,
+          resized: false,
+        },
       ],
     }));
-    await runCreate(set, get, id, query);
+    await runCreate(set, get, id, (on) =>
+      api.createBlock(query, activePageId(), on),
+    );
   },
 
   dismissPending(id) {
@@ -102,10 +140,14 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   },
 
   async retryPending(id) {
-    const entry = get().pending.find((p) => p.id === id);
-    if (!entry) return;
+    // Only reachable when the backend was never contacted, so there is no row
+    // to rebuild — this starts a fresh creation from the same prompt.
+    const card = get().pending.find((p) => p.id === id);
+    if (!card) return;
     patchPending(set, id, { steps: [], preview: null, error: null });
-    await runCreate(set, get, id, entry.query);
+    await runCreate(set, get, id, (on) =>
+      api.createBlock(card.query, activePageId(), on),
+    );
   },
 
   async remove(id) {
@@ -118,7 +160,9 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     }
     forgetBlock(id);
     // Gravity pass: neighbors slide up into the vacated space.
-    const { blocks, changed } = compactUp(get().blocks.filter((b) => b.id !== id));
+    const { blocks, changed } = compactUp(
+      get().blocks.filter((b) => b.id !== id),
+    );
     set({ blocks });
     if (Object.keys(changed).length) persistLayouts(changed);
   },
@@ -126,12 +170,23 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   async refresh(id) {
     const block = get().blocks.find((b) => b.id === id);
     if (!block) return;
+    if (isOffline()) {
+      // Say so and stop. Leaves the block as it was: a network problem is not
+      // a reason to mark a healthy block failed.
+      toast(OFFLINE);
+      return;
+    }
     set((s) => ({
-      blocks: s.blocks.map((b) => (b.id === id ? { ...b, status: "loading" } : b)),
+      blocks: s.blocks.map((b) =>
+        b.id === id ? { ...b, status: "loading" } : b,
+      ),
     }));
     try {
       const updated = await api.refreshBlock(block);
-      const fresh = diffAndRecord(id, updated.items.map((i) => i.id));
+      const fresh = diffAndRecord(
+        id,
+        updated.items.map((i) => i.id),
+      );
       set((s) => ({
         blocks: s.blocks.map((b) => (b.id === id ? updated : b)),
         freshIds: { ...s.freshIds, [id]: fresh },
@@ -139,10 +194,46 @@ export const useBlocks = create<BlocksState>((set, get) => ({
     } catch (e) {
       // The card renders its own error state with a retry button.
       set((s) => ({
-        blocks: s.blocks.map((b) => (b.id === id ? { ...b, status: "error" } : b)),
+        blocks: s.blocks.map((b) =>
+          b.id === id ? { ...b, status: "error" } : b,
+        ),
       }));
       toast(friendlyError(e));
     }
+  },
+
+  async retry(id) {
+    const block = get().blocks.find((b) => b.id === id);
+    if (!block) return;
+    // No search terms means routing never finished, so there is nothing to
+    // refetch — it has to be built from the query again. That is the same
+    // work as creating it, so it goes back through the same narrated path
+    // and reappears as a card showing the agent's steps.
+    if (block.search_terms) return get().refresh(id);
+
+    if (isOffline()) {
+      toast(OFFLINE);
+      return;
+    }
+    const pendingId = `${PENDING_PREFIX}${crypto.randomUUID()}`;
+    set((s) => ({
+      blocks: s.blocks.filter((b) => b.id !== id),
+      pending: [
+        ...s.pending,
+        {
+          id: pendingId,
+          created: block,
+          pageId: block.page_id,
+          query: block.query,
+          steps: [],
+          preview: null,
+          error: null,
+          layout: block.layout,
+          resized: true, // the user already sized this one; leave it alone
+        },
+      ],
+    }));
+    await runCreate(set, get, pendingId, (on) => api.rebuildBlock(id, on));
   },
 
   async refreshAll() {
@@ -161,7 +252,8 @@ export const useBlocks = create<BlocksState>((set, get) => ({
       pending: s.pending.map((p) => {
         const next = layouts[p.id];
         if (!next) return p;
-        const resized = p.resized || next.w !== p.layout.w || next.h !== p.layout.h;
+        const resized =
+          p.resized || next.w !== p.layout.w || next.h !== p.layout.h;
         return { ...p, layout: next, resized };
       }),
     }));
@@ -180,8 +272,16 @@ const PENDING_SIZE = { w: 8, h: 8 };
 
 const PENDING_PREFIX = "pending-";
 
+type StreamHandlers = {
+  created?: (block: Block) => void;
+  progress?: (message: string) => void;
+  preview?: (block: Block) => void;
+};
+
 type Set = (fn: (s: BlocksState) => Partial<BlocksState>) => void;
 type Get = () => BlocksState;
+
+const entry = (get: Get, id: string) => get().pending.find((p) => p.id === id);
 
 function patchPending(set: Set, id: string, patch: Partial<PendingBlock>) {
   set((s) => ({
@@ -189,11 +289,29 @@ function patchPending(set: Set, id: string, patch: Partial<PendingBlock>) {
   }));
 }
 
-/** Drive one creation to completion, reporting into its pending card. */
-async function runCreate(set: Set, get: Get, id: string, query: string) {
+/** Drive one agent run to completion, reporting into its pending card.
+ *
+ *  `call` is the only difference between creating a block and rebuilding a
+ *  failed one: same narration, same swap at the end, same failure handling. */
+async function runCreate(
+  set: Set,
+  get: Get,
+  id: string,
+  call: (on: StreamHandlers) => Promise<Block>,
+) {
+  if (isOffline()) {
+    // The provider CLIs retry for about three minutes before giving up, and a
+    // run makes more than one call. Not worth starting.
+    patchPending(set, id, { error: OFFLINE });
+    return;
+  }
+
   let block: Block;
   try {
-    block = await api.createBlock(query, activePageId(), {
+    block = await call({
+      // The row is already in the database by the time this fires, so from
+      // here on the prompt is safe whatever happens to the connection.
+      created: (b) => patchPending(set, id, { created: b }),
       progress: (message) =>
         set((s) => ({
           pending: s.pending.map((p) =>
@@ -215,14 +333,29 @@ async function runCreate(set: Set, get: Get, id: string, query: string) {
         })),
     });
   } catch (e) {
-    // The card stays on the grid holding the error, so the failure is
-    // attached to the block it belongs to rather than a toast that scrolls by.
+    // Two ways to end up with a real row here: the backend reported the
+    // failure and sent the block with it, or it wrote the row up front and
+    // the connection died before it could tell us anything else. Either way
+    // the block exists, so the card hands over to it — retrying from the card
+    // would otherwise write a second row for the same prompt.
+    const reported =
+      e instanceof ApiError ? (e.data?.block as Block | undefined) : undefined;
+    const rescued = reported ?? entry(get, id)?.created ?? undefined;
+    if (rescued) {
+      const at = entry(get, id)?.layout ?? rescued.layout;
+      set((s) => ({
+        blocks: [...s.blocks, { ...rescued, layout: at, status: "error" }],
+        pending: s.pending.filter((p) => p.id !== id),
+      }));
+      return;
+    }
     patchPending(set, id, { error: friendlyError(e) });
     return;
   }
+
   // Inherit the card's layout exactly as it now stands, including any drag or
   // resize done while waiting, so nothing moves at the moment of the swap.
-  const layout = get().pending.find((p) => p.id === id)?.layout ?? block.layout;
+  const layout = entry(get, id)?.layout ?? block.layout;
   const placed = { ...block, layout };
   set((s) => ({
     blocks: [...s.blocks, placed],

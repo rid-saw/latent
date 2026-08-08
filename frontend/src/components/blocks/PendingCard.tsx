@@ -20,11 +20,14 @@ export function PendingCard({ pending }: { pending: PendingBlock }) {
         <p className="line-clamp-2 text-xs text-faint">"{pending.query}"</p>
         <p className="line-clamp-3 text-xs leading-relaxed text-soft">{pending.error}</p>
         <div className="mt-1 flex gap-2">
+          {/* "Delete" rather than "Dismiss": nothing was saved here, so the
+              two differ technically, but the user can't see that distinction
+              and one word for one apparent action beats being precise. */}
           <button
             onClick={() => dismissPending(pending.id)}
             className="rounded-lg px-3 py-1.5 text-xs text-soft hover:text-ink"
           >
-            Dismiss
+            Delete
           </button>
           <button
             onClick={() => retryPending(pending.id)}

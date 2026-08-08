@@ -11,15 +11,29 @@ export interface Api {
   deletePage(id: string): Promise<void>;
   listBlocks(pageId: string): Promise<Block[]>;
   /** Block creation is slow (two LLM calls), so it reports as it goes:
-   *  onProgress for each agent step, onPreview once raw results exist but
-   *  before the critic has judged them. The promise resolves with the final,
-   *  checked block. */
+   *  `created` once the row exists (before any work), `progress` per agent
+   *  step, `preview` once raw results exist but before the critic has judged
+   *  them. The promise resolves with the final, checked block. */
   createBlock(
     query: string,
     pageId: string,
-    on?: { progress?: (message: string) => void; preview?: (block: Block) => void },
+    on?: {
+      created?: (block: Block) => void;
+      progress?: (message: string) => void;
+      preview?: (block: Block) => void;
+    },
   ): Promise<Block>;
   refreshBlock(block: Block): Promise<Block>;
+  /** Re-run the agent for a block that never finished routing. Same work and
+   *  same narration as createBlock; it just updates an existing row. */
+  rebuildBlock(
+    id: string,
+    on?: {
+      created?: (block: Block) => void;
+      progress?: (message: string) => void;
+      preview?: (block: Block) => void;
+    },
+  ): Promise<Block>;
   deleteBlock(id: string): Promise<void>;
   saveLayouts(layouts: Record<string, BlockLayout>): Promise<void>;
   getBriefing(pageId: string): Promise<Briefing | null>;

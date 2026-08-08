@@ -19,8 +19,11 @@ import { BriefingPanel } from "./BriefingPanel";
 
 
 export function Dashboard() {
-  const { blocks, pending, loading, loadError, load, applyLayouts } = useBlocks();
+  const { blocks, loading, loadError, load, applyLayouts } = useBlocks();
   const { pages, activePageId } = usePages();
+  // Pending cards are stored across all pages, so a restored one doesn't
+  // follow you onto a page it was never created on.
+  const pending = useBlocks((s) => s.pending).filter((p) => p.pageId === activePageId);
   const [showCreate, setShowCreate] = useState(false);
   const { width, containerRef, mounted } = useContainerWidth();
 
