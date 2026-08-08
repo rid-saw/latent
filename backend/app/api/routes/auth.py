@@ -1,5 +1,6 @@
 """Google OAuth: one consent covers YouTube + Gmail (both readonly)."""
 
+import logging
 from urllib.parse import urlencode
 
 import httpx
@@ -36,6 +37,13 @@ async def status() -> dict:
         await get_access_token()  # probes, and silently refreshes if it can
     except HTTPException:
         return {"google": False, "reason": "expired"}
+    except Exception:
+        # Offline, DNS down, Google unreachable. Reported separately because
+        # the token is probably fine and telling the user to reconnect would
+        # send them to a consent screen that also can't load. Anything raised
+        # here would otherwise escape as a 500 on a route the UI polls.
+        logging.warning("could not reach Google to check the token", exc_info=True)
+        return {"google": False, "reason": "unreachable"}
     return {"google": True, "reason": "connected"}
 
 
