@@ -7,7 +7,7 @@ const mock = import.meta.env.VITE_USE_MOCK !== "false";
 
 const LOGIN_URL = `${base}/api/auth/google/login`;
 
-/** Sidebar card: connect Google (one consent = YouTube + Gmail) or show status.
+/** Sidebar card: connect Gmail, or show its status.
  *
  * Connected is a clean statement with nothing to click — the status endpoint
  * verifies against Google, so there's no reason to offer a fix for a problem
@@ -28,7 +28,7 @@ export function GoogleConnectCard() {
     return import.meta.env.VITE_DEMO ? (
       <div className="mt-auto rounded-lg border border-line p-3 text-xs text-faint">
         Everything here is sample content. Run latent yourself to connect your
-        own inbox, YouTube and sources.
+        own inbox.
       </div>
     ) : (
       <div className="mt-auto rounded-lg border border-line p-3 text-xs text-faint">
@@ -49,7 +49,7 @@ export function GoogleConnectCard() {
   if (status === "connected") {
     return (
       <div className="mt-auto flex items-center gap-2 rounded-lg border border-line p-3 text-xs text-emerald-600 dark:text-emerald-400">
-        <CheckCircle2 size={14} /> Google connected (YouTube + Gmail)
+        <CheckCircle2 size={14} /> Gmail connected
       </div>
     );
   }
@@ -63,7 +63,7 @@ export function GoogleConnectCard() {
         <p className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
           <AlertTriangle size={14} /> Google connection expired
         </p>
-        <p className="mt-1 text-soft">Reconnect to use YouTube and inbox blocks.</p>
+        <p className="mt-1 text-soft">Reconnect to use inbox blocks.</p>
       </a>
     );
   }
@@ -73,7 +73,7 @@ export function GoogleConnectCard() {
       href={LOGIN_URL}
       className="mt-auto flex items-center gap-2 rounded-lg border border-line bg-surface p-3 text-xs text-ink hover:border-faint"
     >
-      <Link2 size={14} /> Connect Google — YouTube + Gmail in one step
+      <Link2 size={14} /> Connect Gmail for inbox blocks
     </a>
   );
 }

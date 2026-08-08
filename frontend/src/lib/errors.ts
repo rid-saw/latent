@@ -60,7 +60,7 @@ export function friendlyError(e: unknown): string {
       return "Can't reach latent's backend. Is it running? Start it with ./scripts/dev.sh";
     case 401:
       // The card lives at the bottom of the sidebar, not in Settings.
-      return "Your Google connection isn't working. Reconnect from the card at the bottom of the sidebar — YouTube and inbox blocks need it.";
+      return "Your Gmail connection isn't working. Reconnect from the card at the bottom of the sidebar.";
     case 404:
       return "That's already gone — it may have been deleted in another tab.";
     case 408:
