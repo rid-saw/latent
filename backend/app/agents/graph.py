@@ -44,7 +44,12 @@ async def fetch_node(state: BlockAgentState) -> dict:
     terms = state["search_terms"]
     n = min(state.get("max_items", 3) * OVERFETCH, MAX_FETCH)
     if source == "youtube":
-        items = await search_videos(terms, max_results=n, latest=state.get("wants_latest", False))
+        items = await search_videos(
+            terms,
+            max_results=n,
+            latest=state.get("wants_latest", False),
+            channel=state.get("channel", ""),
+        )
     elif source == "jobs":
         items = await search_jobs(
             terms,

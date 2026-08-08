@@ -8,6 +8,7 @@ class BlockAgentState(TypedDict, total=False):
     source: SourceKind    # supervisor's routing decision
     search_terms: str     # supervisor/critic-refined terms for the connector
     location: str         # jobs only: city/region filter
+    channel: str          # youtube only: the creator the user named, if any
     title: str            # short block title
     max_items: int        # how many items to show (user-specified or default)
     wants_latest: bool    # newest-first rather than most-relevant

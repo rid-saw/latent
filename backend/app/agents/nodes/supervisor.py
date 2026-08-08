@@ -52,6 +52,13 @@ class Plan(BaseModel):
         default="",
         description="For jobs only: city/region if the user named one, else empty",
     )
+    channel: str = Field(
+        default="",
+        description="For youtube only: the channel or creator if the user named "
+        "one ('latest Fireship videos' -> 'Fireship'), else empty. A named "
+        "channel is read from its upload feed; without one the request is a "
+        "topic and gets searched.",
+    )
     title: str = Field(description="Short block title, max 5 words")
     max_items: int = Field(
         ge=1,
@@ -71,6 +78,7 @@ async def supervisor_node(state: BlockAgentState) -> dict:
         "source": plan.source,
         "search_terms": plan.search_terms,
         "location": plan.location,
+        "channel": plan.channel,
         "title": plan.title,
         "max_items": plan.max_items,
         "wants_latest": plan.wants_latest,

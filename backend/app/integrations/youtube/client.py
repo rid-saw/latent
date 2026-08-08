@@ -1,58 +1,179 @@
-"""YouTube Data API v3 — search videos for a block query.
+"""YouTube without an account, a key, or a Google Cloud project.
 
-For "latest from <channel>" requests, resolve the channel first and list its
-uploads newest-first; relevance search can't do that reliably.
+Two public surfaces do everything the Data API was being used for:
+
+  channel feeds  every channel publishes its recent uploads as RSS, with
+                 title, date and thumbnail — the whole card, keyless
+  oembed         title, channel name and thumbnail for any video id, keyless
+
+The Data API needed `youtube.readonly`, which is permission to read the user's
+account — and latent never read it. It only ever searched public videos. So
+the consent bought nothing and, because it was requested alongside Gmail, cost
+the user read access to their inbox to watch videos.
+
+Topic searches have no feed to read, so those go through web search (the
+user's own CLI) filtered to youtube.com, with oembed filling in the details.
 """
+
+import asyncio
+import logging
+import re
+from html import unescape
+from urllib.parse import quote
 
 import httpx
 
-from app.api.routes.auth import get_access_token
 from app.models.schemas import ContentItem
 
-SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+FEED_URL = "https://www.youtube.com/feeds/videos.xml"
+OEMBED_URL = "https://www.youtube.com/oembed"
+WATCH_RE = re.compile(r"youtube\.com/watch\?v=([\w-]{11})|youtu\.be/([\w-]{11})", re.I)
+
+BROWSER_UA = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
+}
+
+# The channel page mentions several channel ids (related channels, shelves),
+# and the first one is often not the page's own — resolving @fireship that way
+# returns Beyond Fireship. The canonical link is the page saying who it is.
+_CANONICAL_RE = re.compile(
+    r'<link rel="canonical" href="https://www\.youtube\.com/channel/(UC[\w-]+)"', re.I
+)
+
+_ENTRY_RE = re.compile(r"<entry>(.*?)</entry>", re.S)
 
 
-def _to_item(entry: dict) -> ContentItem:
-    vid = entry["id"]["videoId"]
-    snip = entry["snippet"]
-    thumbs = snip.get("thumbnails", {})
-    thumb = (thumbs.get("high") or thumbs.get("medium") or thumbs.get("default") or {}).get("url")
-    return ContentItem(
-        id=vid,
-        title=snip["title"],
-        url=f"https://www.youtube.com/watch?v={vid}",
-        source="youtube",
-        meta=f"{snip['channelTitle']} · {snip['publishedAt'][:10]}",
-        thumbnail=thumb,
-    )
+def _tag(entry: str, name: str) -> str:
+    m = re.search(rf"<{name}[^>]*>(.*?)</{name}>", entry, re.S)
+    return unescape(m.group(1)).strip() if m else ""
 
 
-async def _find_channel(client: httpx.AsyncClient, headers: dict, query: str) -> str | None:
+def thumbnail_for(video_id: str) -> str:
+    """Thumbnails are at a fixed path, so an id is enough to build one."""
+    return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+
+
+async def _channel_id(client: httpx.AsyncClient, channel: str) -> str | None:
+    """A channel name or @handle -> its id, by asking the channel page."""
+    handle = channel.strip().lstrip("@").replace(" ", "")
     resp = await client.get(
-        SEARCH_URL,
-        headers=headers,
-        params={"part": "snippet", "q": query, "type": "channel", "maxResults": 1},
+        f"https://www.youtube.com/@{quote(handle)}",
+        headers=BROWSER_UA,
+        follow_redirects=True,
     )
-    resp.raise_for_status()
-    hits = resp.json().get("items", [])
-    return hits[0]["id"]["channelId"] if hits else None
+    if resp.status_code != 200:
+        return None
+    found = _CANONICAL_RE.search(resp.text)
+    return found.group(1) if found else None
+
+
+async def _channel_uploads(
+    client: httpx.AsyncClient, channel: str, max_results: int
+) -> list[ContentItem]:
+    channel_id = await _channel_id(client, channel)
+    if not channel_id:
+        return []
+    resp = await client.get(FEED_URL, params={"channel_id": channel_id})
+    if resp.status_code != 200:
+        return []
+
+    items: list[ContentItem] = []
+    for entry in _ENTRY_RE.findall(resp.text)[:max_results]:
+        video_id = _tag(entry, "yt:videoId")
+        if not video_id:
+            continue
+        published = _tag(entry, "published")[:10]
+        author = _tag(entry, "name")
+        items.append(
+            ContentItem(
+                id=video_id,
+                title=_tag(entry, "media:title") or _tag(entry, "title"),
+                url=f"https://www.youtube.com/watch?v={video_id}",
+                source="youtube",
+                meta=" · ".join(p for p in (author, published) if p),
+                thumbnail=thumbnail_for(video_id),
+            )
+        )
+    return items
+
+
+async def _details(client: httpx.AsyncClient, video_id: str) -> tuple[str, str]:
+    """(title, channel) for a video id. Blank on failure; never raises."""
+    try:
+        resp = await client.get(
+            OEMBED_URL,
+            params={"url": f"https://www.youtube.com/watch?v={video_id}", "format": "json"},
+        )
+        if resp.status_code != 200:
+            return "", ""
+        data = resp.json()
+        return data.get("title", ""), data.get("author_name", "")
+    except Exception:
+        return "", ""
+
+
+async def _search_videos_on_the_web(query: str, max_results: int) -> list[ContentItem]:
+    """No feed exists for a topic, so search the web and keep the videos.
+
+    Search returns a mix of videos and articles about videos; only the former
+    belong in a YouTube block. What survives has no channel or thumbnail, so
+    oembed fills those in.
+    """
+    from app.integrations.websearch.client import search_web  # lazy: import cycle
+
+    # Over-fetch: roughly half of what comes back is usually not a video.
+    hits = await search_web(f"YouTube videos: {query}", max_results=max_results * 3)
+
+    seen: set[str] = set()
+    ids: list[str] = []
+    for hit in hits:
+        m = WATCH_RE.search(hit.url)
+        if not m:
+            continue
+        video_id = m.group(1) or m.group(2)
+        if video_id not in seen:
+            seen.add(video_id)
+            ids.append(video_id)
+    ids = ids[:max_results]
+    if not ids:
+        return []
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        details = await asyncio.gather(*(_details(client, v) for v in ids))
+
+    return [
+        ContentItem(
+            id=video_id,
+            title=title or "YouTube video",
+            url=f"https://www.youtube.com/watch?v={video_id}",
+            source="youtube",
+            meta=author or None,
+            thumbnail=thumbnail_for(video_id),
+        )
+        for video_id, (title, author) in zip(ids, details)
+        if title or author  # a dead id returns nothing from oembed
+    ]
 
 
 async def search_videos(
-    query: str, max_results: int = 3, latest: bool = False
+    query: str, max_results: int = 3, latest: bool = False, channel: str = ""
 ) -> list[ContentItem]:
-    token = await get_access_token()
-    headers = {"Authorization": f"Bearer {token}"}
-    params: dict = {"part": "snippet", "type": "video", "maxResults": max_results}
+    """Videos for a block.
 
-    async with httpx.AsyncClient(timeout=15) as client:
-        channel_id = await _find_channel(client, headers, query) if latest else None
-        if channel_id:
-            # The user's actual ask: this channel's newest uploads.
-            params |= {"channelId": channel_id, "order": "date"}
-        else:
-            params |= {"q": query, "order": "date" if latest else "relevance"}
-        resp = await client.get(SEARCH_URL, headers=headers, params=params)
+    `channel` is the supervisor's answer to "did the user name a channel?".
+    Named means there is a feed to read; unnamed means there isn't, and the
+    query is a topic. A channel that can't be resolved falls through to search
+    rather than returning an empty block.
+    """
+    if channel:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                items = await _channel_uploads(client, channel, max_results)
+            if items:
+                return items
+            logging.info("no feed for channel %r; searching instead", channel)
+        except Exception:
+            logging.warning("channel lookup failed for %r", channel, exc_info=True)
 
-    resp.raise_for_status()
-    return [_to_item(e) for e in resp.json().get("items", [])]
+    return await _search_videos_on_the_web(query, max_results)
