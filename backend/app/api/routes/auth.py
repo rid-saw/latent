@@ -1,4 +1,4 @@
-"""Google OAuth: one consent covers YouTube + Gmail (both readonly)."""
+"""Google OAuth, for Gmail. Nothing else needs an account."""
 
 import logging
 from urllib.parse import urlencode
@@ -12,10 +12,14 @@ from app.core.tokens import load_tokens, save_tokens
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# Gmail only. YouTube used to be here, but the connector never read the user's
+# account — it searched public videos, which needs no permission at all. So the
+# consent bought nothing, and because both scopes were requested together it
+# cost read access to the inbox in exchange for video search. YouTube now reads
+# the public feeds instead, and this is the one thing that still has to ask.
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/youtube.readonly",
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
