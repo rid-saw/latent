@@ -1,13 +1,13 @@
 # Google OAuth setup (one-time, ~5 min)
 
-One OAuth client covers **both YouTube and Gmail** — a single consent screen.
+This is **only for Gmail blocks** — reading your own inbox. Everything else in
+latent (papers, YouTube, news, sports, jobs, web search) reads public sources and
+needs none of this. Skip this page unless you want your email in there.
 
 ## 1. Create the project + enable APIs
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com/) → create project (e.g. `latent`).
-2. **APIs & Services → Library** → enable:
-   - **YouTube Data API v3**
-   - **Gmail API**
+2. **APIs & Services → Library** → enable the **Gmail API**.
 
 ## 2. Consent screen
 
@@ -48,6 +48,8 @@ Tokens land in `backend/.tokens.json` (gitignored, dev-only).
 
 ## Notes
 
-- Scopes requested: `youtube.readonly`, `gmail.readonly`, `userinfo.email` — read-only.
-- "Testing" mode refresh tokens expire after 7 days — reconnect when that happens
-  (fine for dev; publishing the app removes the limit).
+- Scopes requested: `gmail.readonly`, `userinfo.email` — read-only.
+- "Testing" mode refresh tokens expire after 7 days, so you reconnect weekly.
+  That's the cost of it staying your own app. Publishing would remove the limit,
+  but `gmail.readonly` is a *restricted* scope, so Google requires a paid
+  third-party security assessment first — not worth it to read your own mail.

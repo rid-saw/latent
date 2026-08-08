@@ -16,9 +16,9 @@ out as adaptable content blocks.
 - **Adaptable blocks UI.** You choose what shows up. Describe an interest in plain
   English ("latest Fireship videos", "recent papers on AI in medicine"), and an
   agent finds, ranks, and populates a block with it. Drag, resize, rearrange.
-- **Bring your own sources.** Connect your Google account (YouTube + Gmail in one
-  step). Papers, news, sports, and job listings (via Seek, AU/NZ roles) come from
-  open sources, no API keys.
+- **Nothing to set up.** Papers, YouTube, news, sports, job listings (via Seek,
+  AU/NZ roles) and general web search all read public sources. No API keys, no
+  accounts. Connect Google only if you want your own inbox in there.
 - **Your briefing.** Instead of ten tabs, one agent-written paragraph per page that
   summarizes what's new and worth your attention.
 - **Your AI subscription, not an API bill.** All AI runs headless through the CLI
@@ -46,8 +46,9 @@ terms `from:monash.edu`, 3 items. Picking the terms is its own skill: Gmail
 requires every word to match, so a casual "uni" finds nothing.
 
 **2. A connector fetches.** Plain HTTP against free, keyless APIs wherever
-possible (OpenAlex for papers, Google News RSS, ESPN, Seek). YouTube and Gmail go
-through your own Google OAuth token.
+possible (OpenAlex for papers, Google News RSS, ESPN, Seek, and YouTube's public
+upload feeds). Only Gmail needs your own OAuth token, because only Gmail reads
+something private.
 
 **3. The critic checks the results.** A second LLM call reviews what came back and
 drops anything off topic. If the whole set is weak, it rewrites the search terms
@@ -85,7 +86,7 @@ worth making, and an API key still works as a fallback.
 | Backend   | FastAPI (Python) + SQLite |
 | Agents    | LangGraph: supervisor routes → connectors fetch → critic verifies |
 | LLM       | **Your AI subscription**: Claude, ChatGPT, or Gemini via their CLIs, no API key |
-| Auth      | Google OAuth, one consent covers YouTube + Gmail |
+| Auth      | Google OAuth, for Gmail only — nothing else needs an account |
 
 ## Structure
 
@@ -150,10 +151,9 @@ routing falls back to keyword matching instead of the agent.
 ./scripts/dev.sh    # backend on :8000, frontend on :5173, Ctrl+C stops both
 ```
 
-Open http://localhost:5173. Papers, news, sports, jobs and web search work
-immediately. YouTube and Gmail read your own account, so they need Google
-credentials: copy `.env.example` to `.env` (repo root) and follow
-[docs/oauth-setup.md](docs/oauth-setup.md).
+Open http://localhost:5173. Everything works immediately except Gmail,
+which reads your own inbox and so needs your consent: copy `.env.example` to
+`.env` (repo root) and follow [docs/oauth-setup.md](docs/oauth-setup.md).
 
 ## License
 
