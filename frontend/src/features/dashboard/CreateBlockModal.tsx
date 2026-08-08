@@ -58,12 +58,14 @@ export function CreateBlockModal({ onClose }: { onClose: () => void }) {
           className="w-full resize-none rounded-lg border border-line bg-bg p-3 text-sm outline-none focus:border-accent"
         />
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        {/* Two columns rather than wrapping pills: these prompts are long
+            enough that each one claimed a whole row, which read as a list. */}
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {examples.map((ex) => (
             <button
               key={ex}
               onClick={() => setQuery(ex)}
-              className="rounded-full border border-line px-3 py-1 text-xs text-soft hover:border-faint hover:text-ink"
+              className="rounded-lg border border-line px-3 py-1.5 text-left text-xs leading-snug text-soft hover:border-faint hover:text-ink"
             >
               {ex}
             </button>
