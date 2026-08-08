@@ -217,7 +217,7 @@ export const mockApi: Api = {
     await delay(150);
     return seed.filter((b) => b.page_id === pageId).map((b) => ({ ...b }));
   },
-  async createBlock(query, pageId, onProgress) {
+  async createBlock(query, pageId, on) {
     const source = inferSource(query);
     // Mirrors the real agent's steps so mock mode demos the same experience,
     // just faster — no LLM behind it.
@@ -231,23 +231,26 @@ export const mockApi: Api = {
       web: "the web",
       site: "that page",
     };
-    onProgress?.("Working out where to look…");
-    await delay(700);
-    onProgress?.(`Searching ${place[source] ?? "the web"} for “${query}”`);
-    await delay(700);
-    onProgress?.("Reviewing 3 results");
-    await delay(600);
-    return {
+    const block = (status: Block["status"]): Block => ({
       id: crypto.randomUUID(),
       page_id: pageId,
       title: titleFrom(query),
       query,
       source,
       layout: defaultLayout(source),
-      status: "ready",
+      status,
       items: [fakeItem(query, source)],
       max_items: 3,
-    };
+    });
+
+    on?.progress?.("Working out where to look…");
+    await delay(700);
+    on?.progress?.(`Searching ${place[source] ?? "the web"} for “${query}”`);
+    await delay(700);
+    on?.progress?.("Reviewing 3 results");
+    on?.preview?.(block("loading")); // raw results, before the critic
+    await delay(900);
+    return block("ready");
   },
   async refreshBlock(block) {
     await delay(500);

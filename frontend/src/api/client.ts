@@ -10,11 +10,14 @@ export interface Api {
   updatePage(id: string, name: string, emoji: string): Promise<Page>;
   deletePage(id: string): Promise<void>;
   listBlocks(pageId: string): Promise<Block[]>;
-  /** onProgress receives the agent's steps as they happen (~47s of work). */
+  /** Block creation is slow (two LLM calls), so it reports as it goes:
+   *  onProgress for each agent step, onPreview once raw results exist but
+   *  before the critic has judged them. The promise resolves with the final,
+   *  checked block. */
   createBlock(
     query: string,
     pageId: string,
-    onProgress?: (message: string) => void,
+    on?: { progress?: (message: string) => void; preview?: (block: Block) => void },
   ): Promise<Block>;
   refreshBlock(block: Block): Promise<Block>;
   deleteBlock(id: string): Promise<void>;

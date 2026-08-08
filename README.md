@@ -99,17 +99,24 @@ scripts/    dev helpers (scripts/dev.sh runs everything)
 
 ## Getting started
 
-Prereqs: Node 20+, pnpm, Python 3.12+, uv, and ONE of these CLIs logged in:
+Prereqs: Node 20+, pnpm, Python 3.12+, uv, and ONE of these CLIs:
 [Claude Code](https://claude.com/claude-code) (Claude subscription),
 [Codex CLI](https://developers.openai.com/codex) (ChatGPT subscription), or
 [Gemini CLI](https://github.com/google-gemini/gemini-cli) (free Google account).
+
+**Sign in to that CLI once** before running latent: install it, run it
+(`claude`, `codex` or `gemini`), and log in with your existing account. latent
+never sees that credential. It shells out to whichever CLI it finds on your
+PATH and inherits the session. Skip this step and blocks still work, but
+routing falls back to keyword matching instead of the agent.
 
 ```sh
 ./scripts/dev.sh    # starts backend (:8000) + frontend (:5173), Ctrl+C stops both
 ```
 
-First run: copy `.env.example` to `.env` (repo root) and add Google OAuth
-credentials if you want YouTube/Gmail blocks (everything else works without).
+Papers, news, sports, jobs and web search work straight away. YouTube and Gmail
+need a Google account connected: copy `.env.example` to `.env` (repo root) and
+follow [docs/oauth-setup.md](docs/oauth-setup.md) for the credentials.
 
 ## License
 

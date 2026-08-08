@@ -13,7 +13,7 @@ export function DemoBadge() {
       target="_blank"
       rel="noreferrer"
       title="Sample content. View the source on GitHub"
-      className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs text-soft hover:border-faint hover:text-ink"
+      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs text-soft hover:border-faint hover:text-ink"
     >
       <Github size={13} />
       Demo

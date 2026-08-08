@@ -23,7 +23,9 @@ function NewBadge() {
   );
 }
 
-export function BlockCard({ block }: { block: Block }) {
+/** `readOnly` is for the preview of a block still being built: it has no
+ *  server id yet, so refreshing or deleting it would act on nothing. */
+export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolean }) {
   const { refresh, remove } = useBlocks();
   const freshIds = useBlocks((s) => s.freshIds[block.id]);
   const [confirming, setConfirming] = useState(false);
@@ -44,20 +46,24 @@ export function BlockCard({ block }: { block: Block }) {
         >
           {block.source}
         </span>
-        <button
-          onClick={() => refresh(block.id)}
-          className="text-faint hover:text-ink"
-          title="Refresh"
-        >
-          <RefreshCw size={14} className={cn(loading && "animate-spin")} />
-        </button>
-        <button
-          onClick={() => setConfirming(true)}
-          className="text-faint hover:text-red-500"
-          title="Remove"
-        >
-          <X size={14} />
-        </button>
+        {!readOnly && (
+          <>
+            <button
+              onClick={() => refresh(block.id)}
+              className="text-faint hover:text-ink"
+              title="Refresh"
+            >
+              <RefreshCw size={14} className={cn(loading && "animate-spin")} />
+            </button>
+            <button
+              onClick={() => setConfirming(true)}
+              className="text-faint hover:text-red-500"
+              title="Remove"
+            >
+              <X size={14} />
+            </button>
+          </>
+        )}
       </header>
 
       {confirming && (

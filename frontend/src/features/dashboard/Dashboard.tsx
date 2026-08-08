@@ -12,13 +12,14 @@ import { usePages } from "@/stores/pages";
 import { useSettings } from "@/stores/settings";
 import { PageIcon } from "@/lib/pageIcons";
 import { BlockCard } from "@/components/blocks/BlockCard";
+import { PendingCard } from "@/components/blocks/PendingCard";
 import { DemoBadge } from "@/components/ui/DemoBadge";
 import { CreateBlockModal } from "./CreateBlockModal";
 import { BriefingPanel } from "./BriefingPanel";
 
 
 export function Dashboard() {
-  const { blocks, loading, loadError, load, applyLayouts } = useBlocks();
+  const { blocks, pending, loading, loadError, load, applyLayouts } = useBlocks();
   const { pages, activePageId } = usePages();
   const [showCreate, setShowCreate] = useState(false);
   const { width, containerRef, mounted } = useContainerWidth();
@@ -40,7 +41,9 @@ export function Dashboard() {
 
   const page = pages.find((p) => p.id === activePageId);
 
-  const layout: LayoutItem[] = blocks.map((b) => ({
+  // Blocks under construction sit on the grid next to finished ones, so the
+  // dashboard stays usable while the agent works.
+  const layout: LayoutItem[] = [...blocks, ...pending].map((b) => ({
     i: b.id,
     x: b.layout.x,
     y: b.layout.y,
@@ -63,17 +66,19 @@ export function Dashboard() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-line px-6 py-4">
-        <h1 className="flex items-center gap-2.5 text-lg font-semibold">
+        {/* The title yields space; the controls never shrink, so a long page
+            name truncates instead of wrapping the button's label. */}
+        <h1 className="flex min-w-0 items-center gap-2.5 text-lg font-semibold">
           <PageIcon icon={page?.emoji ?? "file-text"} size={18} />
-          {page?.name ?? "Dashboard"}
+          <span className="truncate">{page?.name ?? "Dashboard"}</span>
         </h1>
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2.5">
           <DemoBadge />
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-medium text-bg hover:opacity-90"
+            className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-medium text-bg hover:opacity-90"
           >
-            <Plus size={16} /> Create block
+            <Plus size={16} className="shrink-0" /> Create block
           </button>
         </div>
       </header>
@@ -82,7 +87,10 @@ export function Dashboard() {
 
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto p-2"
+        // pb-[50vh]: without slack under the grid the last row can never be
+        // scrolled up into view, so the block you just added stays pinned to
+        // the bottom edge.
+        className="flex-1 overflow-auto p-2 pb-[50vh]"
         // Kill native HTML5 drags (links/images in cards). Mid-gesture, the
         // hover header loses pointer-events and Chrome re-hit-tests the drag
         // origin, finds the <a> underneath, and starts a link-drag — which
@@ -114,7 +122,7 @@ export function Dashboard() {
               Try again
             </button>
           </div>
-        ) : blocks.length === 0 ? (
+        ) : blocks.length === 0 && pending.length === 0 ? (
           <div className="mt-24 text-center">
             <p className="text-sm text-soft">No blocks yet.</p>
             <button
@@ -145,6 +153,11 @@ export function Dashboard() {
               {blocks.map((b) => (
                 <div key={b.id}>
                   <BlockCard block={b} />
+                </div>
+              ))}
+              {pending.map((p) => (
+                <div key={p.id}>
+                  <PendingCard pending={p} />
                 </div>
               ))}
             </GridLayout>

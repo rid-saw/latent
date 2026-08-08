@@ -57,7 +57,7 @@ function parseFrame(frame: string): { event: string; data: Record<string, unknow
 async function streamBlock(
   query: string,
   pageId: string,
-  onProgress?: (message: string) => void,
+  on?: { progress?: (message: string) => void; preview?: (block: Block) => void },
 ): Promise<Block> {
   let res: Response;
   try {
@@ -95,7 +95,9 @@ async function streamBlock(
       const parsed = parseFrame(frame);
       if (!parsed) continue;
       if (parsed.event === "progress") {
-        onProgress?.(String(parsed.data.message ?? ""));
+        on?.progress?.(String(parsed.data.message ?? ""));
+      } else if (parsed.event === "preview") {
+        on?.preview?.(parsed.data as unknown as Block);
       } else if (parsed.event === "block") {
         block = parsed.data as unknown as Block;
       } else if (parsed.event === "error") {
@@ -120,8 +122,7 @@ export const httpApi: Api = {
     }),
   deletePage: (id) => req<void>(`/api/pages/${id}`, { method: "DELETE" }),
   listBlocks: (pageId) => req<Block[]>(`/api/blocks?page_id=${pageId}`),
-  createBlock: (query, pageId, onProgress) =>
-    streamBlock(query, pageId, onProgress),
+  createBlock: (query, pageId, on) => streamBlock(query, pageId, on),
   refreshBlock: (block) =>
     req<Block>(`/api/blocks/${block.id}/refresh`, { method: "POST" }),
   deleteBlock: (id) => req<void>(`/api/blocks/${id}`, { method: "DELETE" }),

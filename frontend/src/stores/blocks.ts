@@ -13,18 +13,29 @@ function occupiedLayouts(blocks: Block[]): BlockLayout[] {
 
 const activePageId = () => usePages.getState().activePageId;
 
+/** A block being built. Lives on the grid so the dashboard stays usable while
+ *  the agent works, and so a failure has somewhere to be reported. */
+export interface PendingBlock {
+  id: string; // local only; the real block gets a server id
+  query: string;
+  steps: string[]; // agent progress, newest last
+  preview: Block | null; // raw results, before the critic has judged them
+  error: string | null;
+  layout: BlockLayout;
+  resized: boolean; // user set the size; don't overwrite it with the default
+}
+
 interface BlocksState {
   blocks: Block[];
+  pending: PendingBlock[];
   loading: boolean;
   loadError: string | null; // page-level failure (backend down, etc.)
   loadedPageId: string | null; // which page the current blocks belong to
-  creating: boolean;
-  progress: string[]; // the agent's steps for the block being created
   freshIds: Record<string, string[]>; // per block: item ids unseen before now
   load: () => Promise<void>;
-  /** Resolves to an error message the caller should show, or null on success. */
-  create: (query: string) => Promise<string | null>;
-  resetProgress: () => void;
+  create: (query: string) => Promise<void>;
+  dismissPending: (id: string) => void;
+  retryPending: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   refresh: (id: string) => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -32,14 +43,13 @@ interface BlocksState {
 }
 
 // Every action below owns its failures. Nothing here is allowed to throw: an
-// unhandled rejection leaves `loading`/`creating` stuck on and the UI dead.
+// unhandled rejection leaves a spinner stuck on with nobody to clear it.
 export const useBlocks = create<BlocksState>((set, get) => ({
   blocks: [],
+  pending: [],
   loading: false,
   loadError: null,
   loadedPageId: null,
-  creating: false,
-  progress: [],
   freshIds: {},
 
   async load() {
@@ -73,29 +83,29 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   },
 
   async create(query) {
-    set({ creating: true, progress: [] });
-    let block: Block;
-    try {
-      block = await api.createBlock(query, activePageId(), (message) =>
-        set((s) => ({ progress: [...s.progress, message] })),
-      );
-    } catch (e) {
-      // The modal stays open and shows this, so the typed query isn't lost.
-      return friendlyError(e);
-    } finally {
-      // Progress survives a failure so the modal can show how far it got.
-      set({ creating: false });
-    }
     // Reading order: first free spot left->right, wrapping to the next row.
-    const spot = findSpot(block.layout.w, block.layout.h, occupiedLayouts(get().blocks));
-    const placed = { ...block, layout: { ...block.layout, ...spot } };
-    set((s) => ({ blocks: [...s.blocks, placed] }));
-    persistLayouts({ [placed.id]: placed.layout });
-    return null;
+    // Claimed up front so the finished block lands where the card already is.
+    const occupied = [...occupiedLayouts(get().blocks), ...get().pending.map((p) => p.layout)];
+    const layout = { ...PENDING_SIZE, ...findSpot(PENDING_SIZE.w, PENDING_SIZE.h, occupied) };
+    const id = `${PENDING_PREFIX}${crypto.randomUUID()}`;
+    set((s) => ({
+      pending: [
+        ...s.pending,
+        { id, query, steps: [], preview: null, error: null, layout, resized: false },
+      ],
+    }));
+    await runCreate(set, get, id, query);
   },
 
-  resetProgress() {
-    set({ progress: [] });
+  dismissPending(id) {
+    set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }));
+  },
+
+  async retryPending(id) {
+    const entry = get().pending.find((p) => p.id === id);
+    if (!entry) return;
+    patchPending(set, id, { steps: [], preview: null, error: null });
+    await runCreate(set, get, id, entry.query);
   },
 
   async remove(id) {
@@ -145,10 +155,81 @@ export const useBlocks = create<BlocksState>((set, get) => ({
       blocks: s.blocks.map((b) =>
         layouts[b.id] ? { ...b, layout: layouts[b.id] } : b,
       ),
+      // Pending cards are draggable too, and their layout is what the finished
+      // block inherits — so a drag that isn't recorded here gets undone the
+      // moment the agent returns.
+      pending: s.pending.map((p) => {
+        const next = layouts[p.id];
+        if (!next) return p;
+        const resized = p.resized || next.w !== p.layout.w || next.h !== p.layout.h;
+        return { ...p, layout: next, resized };
+      }),
     }));
-    persistLayouts(layouts);
+    // Pending ids have no row yet; sending them would be a no-op round trip.
+    const saved = Object.fromEntries(
+      Object.entries(layouts).filter(([id]) => !id.startsWith(PENDING_PREFIX)),
+    );
+    if (Object.keys(saved).length) persistLayouts(saved);
   },
 }));
+
+// A pending card starts before its source is known, so it can't use that
+// source's preferred size. It adopts one the moment the preview arrives,
+// unless the user has already picked their own.
+const PENDING_SIZE = { w: 8, h: 8 };
+
+const PENDING_PREFIX = "pending-";
+
+type Set = (fn: (s: BlocksState) => Partial<BlocksState>) => void;
+type Get = () => BlocksState;
+
+function patchPending(set: Set, id: string, patch: Partial<PendingBlock>) {
+  set((s) => ({
+    pending: s.pending.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+  }));
+}
+
+/** Drive one creation to completion, reporting into its pending card. */
+async function runCreate(set: Set, get: Get, id: string, query: string) {
+  let block: Block;
+  try {
+    block = await api.createBlock(query, activePageId(), {
+      progress: (message) =>
+        set((s) => ({
+          pending: s.pending.map((p) =>
+            p.id === id ? { ...p, steps: [...p.steps, message] } : p,
+          ),
+        })),
+      preview: (b) =>
+        set((s) => ({
+          pending: s.pending.map((p) => {
+            if (p.id !== id) return p;
+            // Take the source's preferred size now, while the card is still
+            // visibly in progress. Doing it at the end instead would resize
+            // the block under a user who had already settled it.
+            const layout = p.resized
+              ? p.layout
+              : { ...p.layout, w: b.layout.w, h: b.layout.h };
+            return { ...p, preview: b, layout };
+          }),
+        })),
+    });
+  } catch (e) {
+    // The card stays on the grid holding the error, so the failure is
+    // attached to the block it belongs to rather than a toast that scrolls by.
+    patchPending(set, id, { error: friendlyError(e) });
+    return;
+  }
+  // Inherit the card's layout exactly as it now stands, including any drag or
+  // resize done while waiting, so nothing moves at the moment of the swap.
+  const layout = get().pending.find((p) => p.id === id)?.layout ?? block.layout;
+  const placed = { ...block, layout };
+  set((s) => ({
+    blocks: [...s.blocks, placed],
+    pending: s.pending.filter((p) => p.id !== id),
+  }));
+  persistLayouts({ [placed.id]: placed.layout });
+}
 
 // Debounced persistence — drag emits layout changes continuously.
 let layoutTimer: ReturnType<typeof setTimeout> | undefined;

@@ -52,6 +52,12 @@ async def create_block_stream(req: CreateBlockRequest, db: Session = Depends(get
                 if kind == "progress":
                     yield _sse("progress", {"message": payload})
                     continue
+                if kind == "preview":
+                    # Display only: unsaved, and superseded by the final block.
+                    preview: Block = payload  # type: ignore[assignment]
+                    preview.page_id = req.page_id
+                    yield _sse("preview", preview.model_dump())
+                    continue
                 block: Block = payload  # type: ignore[assignment]
                 block.page_id = req.page_id
                 db.add(BlockRow.from_schema(block))

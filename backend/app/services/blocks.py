@@ -139,11 +139,33 @@ async def create_block(query: str) -> Block:
     )
 
 
+def _block_from(state: dict, query: str, status: str) -> Block:
+    source: SourceKind = state.get("source", "web")
+    max_items = state.get("max_items") or default_max_items(source)
+    return Block(
+        id=str(uuid.uuid4()),
+        title=state.get("title") or title_from(query),
+        query=query,
+        search_terms=state.get("search_terms") or "",
+        source=source,
+        layout=default_layout(source),
+        items=(state.get("items") or [])[:max_items],
+        status=status,  # type: ignore[arg-type]
+        max_items=max_items,
+    )
+
+
 async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]]:
-    """create_block, narrated. Yields ("progress", line) … then ("block", Block).
+    """create_block, narrated. Yields ("progress", line), ("preview", Block)
+    once there is something to show, then ("block", Block) when it's final.
 
     Progress comes from the graph's own node updates, so a line is only shown
     once the step it describes has actually happened.
+
+    The preview exists because results are ready the moment the fetch returns,
+    but the critic then spends about as long again judging them. Waiting for
+    that doubles the time before anything is on screen, so the raw results go
+    out first and the checked version replaces them in place.
     """
     from app.agents.llm import agents_enabled  # lazy: avoid import cycle
 
@@ -169,6 +191,9 @@ async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]
                     yield "progress", progress.searching(source, state["search_terms"])
                 elif node == "fetch":
                     yield "progress", progress.reviewing(source, len(state.get("items") or []))
+                    # Show the raw results now rather than after the critic.
+                    if state.get("items"):
+                        yield "preview", _block_from(state, query, status="loading")
                 elif node == "critic" and not state.get("approved"):
                     # Only narrate a refinement that's actually about to happen.
                     if state.get("iterations", 0) < MAX_ROUNDS:
@@ -180,20 +205,9 @@ async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]
         yield "block", await create_block(query)
         return
 
-    max_items = state.get("max_items") or default_max_items(state.get("source", "web"))
-    items = (state.get("items") or [])[:max_items]
-    yield "progress", progress.finishing(state.get("source", "web"), len(items))
-    yield "block", Block(
-        id=str(uuid.uuid4()),
-        title=state.get("title") or title_from(query),
-        query=query,
-        search_terms=state.get("search_terms") or "",
-        source=state.get("source", "web"),
-        layout=default_layout(state.get("source", "web")),
-        items=items,
-        status="ready",
-        max_items=max_items,
-    )
+    final = _block_from(state, query, status="ready")
+    yield "progress", progress.finishing(final.source, len(final.items))
+    yield "block", final
 
 
 async def _create_block_agentic(query: str) -> Block:
