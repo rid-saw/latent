@@ -74,6 +74,11 @@ async def critic_node(state: BlockAgentState) -> dict:
 
     kept = [items[i] for i in keep]
     update: dict = {"approved": critique.approved, "items": kept}
-    if not critique.approved and critique.refined_search_terms:
+    # Dropping off-topic items is worth doing for every source. Rewriting the
+    # search is not: a verbatim source holds the user's own sentence here, it
+    # will not be refetched, and this string is persisted and reused by every
+    # later refresh — so overwriting it with keywords would quietly undo the
+    # whole point of sending the request intact.
+    if not critique.approved and critique.refined_search_terms and not state.get("verbatim"):
         update["search_terms"] = critique.refined_search_terms
     return update

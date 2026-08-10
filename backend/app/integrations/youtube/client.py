@@ -113,17 +113,23 @@ async def _details(client: httpx.AsyncClient, video_id: str) -> tuple[str, str]:
         return "", ""
 
 
-async def _search_videos_on_the_web(query: str, max_results: int) -> list[ContentItem]:
+async def _search_videos_on_the_web(
+    query: str, max_results: int, plan: dict | None = None
+) -> list[ContentItem]:
     """No feed exists for a topic, so search the web and keep the videos.
 
-    Search returns a mix of videos and articles about videos; only the former
-    belong in a YouTube block. What survives has no channel or thumbnail, so
-    oembed fills those in.
+    `query` is the user's own sentence. Asking for videos is the *search's*
+    job, not something to graft onto what they wrote — so it goes through as
+    `videos_only`, which adds a rule to the wrapper the search already has.
+
+    What survives has no channel or thumbnail, so oembed fills those in.
     """
     from app.integrations.websearch.client import search_web  # lazy: import cycle
 
     # Over-fetch: roughly half of what comes back is usually not a video.
-    hits = await search_web(f"YouTube videos: {query}", max_results=max_results * 3)
+    hits = await search_web(
+        query, max_results=max_results * 3, plan=plan, videos_only=True
+    )
 
     seen: set[str] = set()
     ids: list[str] = []
@@ -157,14 +163,20 @@ async def _search_videos_on_the_web(query: str, max_results: int) -> list[Conten
 
 
 async def search_videos(
-    query: str, max_results: int = 3, latest: bool = False, channel: str = ""
+    query: str,
+    max_results: int = 3,
+    latest: bool = False,
+    channel: str = "",
+    plan: dict | None = None,
 ) -> list[ContentItem]:
     """Videos for a block.
 
     `channel` is the supervisor's answer to "did the user name a channel?".
     Named means there is a feed to read; unnamed means there isn't, and the
-    query is a topic. A channel that can't be resolved falls through to search
-    rather than returning an empty block.
+    query is a topic — in which case `query` is the user's whole sentence, and
+    `plan` carries the supervisor's other answers as context for the search.
+    A channel that can't be resolved falls through to search rather than
+    returning an empty block.
     """
     if channel:
         try:
@@ -176,4 +188,4 @@ async def search_videos(
         except Exception:
             logging.warning("channel lookup failed for %r", channel, exc_info=True)
 
-    return await _search_videos_on_the_web(query, max_results)
+    return await _search_videos_on_the_web(query, max_results, plan)

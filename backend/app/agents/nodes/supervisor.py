@@ -72,11 +72,33 @@ class Plan(BaseModel):
     )
 
 
+def searches_with_the_users_own_words(source: str, channel: str) -> bool:
+    """Which sources read the request itself rather than extracted keywords.
+
+    Every other connector is a keyword index — Gmail needs every word to match,
+    arXiv ANDs them, Seek wants role words only — so a sentence returns nothing
+    and the terms are doing real work. These two hand the string to a language
+    model, which can act on detail the others would choke on. Compressing for
+    them throws away the only part they could have used.
+
+    Decided here, in code, rather than asked of the model: told to "keep the
+    request verbatim" it complies unevenly, passing one prompt through intact
+    and squeezing the next one down to four words.
+    """
+    return source == "web" or (source == "youtube" and not channel)
+
+
 async def supervisor_node(state: BlockAgentState) -> dict:
     plan = await structured_llm(PROMPT.format(query=state["query"]), Plan)
+    verbatim = searches_with_the_users_own_words(plan.source, plan.channel)
     return {
         "source": plan.source,
-        "search_terms": plan.search_terms,
+        # For a verbatim source this is the request itself. It is also what
+        # gets persisted on the block and reused by every later refresh, so
+        # storing the whole sentence is what keeps refreshes as good as the
+        # first fetch.
+        "search_terms": state["query"] if verbatim else plan.search_terms,
+        "verbatim": verbatim,
         "location": plan.location,
         "channel": plan.channel,
         "title": plan.title,

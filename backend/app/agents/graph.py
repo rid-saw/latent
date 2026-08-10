@@ -21,13 +21,13 @@ from app.integrations.youtube.client import search_videos
 
 MAX_ROUNDS = 2
 
+# Connectors that take a keyword string and nothing else. youtube, web and
+# jobs need more than that and are called directly in fetch_node.
 _CONNECTORS = {
-    "youtube": search_videos,
     "papers": search_papers,
     "gmail": search_messages,
     "news": search_news,
     "sports": search_sports,
-    "web": search_web,
 }
 
 
@@ -43,13 +43,18 @@ async def fetch_node(state: BlockAgentState) -> dict:
     source = state["source"]
     terms = state["search_terms"]
     n = min(state.get("max_items", 3) * OVERFETCH, MAX_FETCH)
+    # The two searches that read the request itself are handed the whole state
+    # as context; the keyword connectors below take a string and nothing else.
     if source == "youtube":
         items = await search_videos(
             terms,
             max_results=n,
             latest=state.get("wants_latest", False),
             channel=state.get("channel", ""),
+            plan=state,
         )
+    elif source == "web":
+        items = await search_web(terms, max_results=n, plan=state)
     elif source == "jobs":
         items = await search_jobs(
             terms,
@@ -79,6 +84,11 @@ async def fetch_node(state: BlockAgentState) -> dict:
 
 
 def _after_critic(state: BlockAgentState) -> str:
+    if state.get("verbatim"):
+        # This source searched with the user's own sentence, so there is no
+        # term to rewrite. A second round would send the identical string and
+        # get the identical results, an LLM call and a fetch for nothing.
+        return "done"
     if state.get("approved") or state.get("iterations", 0) >= MAX_ROUNDS:
         return "done"
     return "refine"

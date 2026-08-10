@@ -121,8 +121,9 @@ async def test_an_unresolvable_channel_searches_instead(serve, monkeypatch):
 
     called = {}
 
-    async def fake_search(query, max_results=3):
+    async def fake_search(query, max_results=3, **kw):
         called["query"] = query
+        called.update(kw)
         return [ContentItem(id="x", title="found anyway",
                             url="https://www.youtube.com/watch?v=abc12345678",
                             source="youtube")]
@@ -140,7 +141,7 @@ async def _ok():
 
 
 async def test_topic_search_keeps_videos_and_drops_articles(monkeypatch):
-    async def fake_search(query, max_results=3):
+    async def fake_search(query, max_results=3, **kw):
         return [
             ContentItem(id="1", title="Best YouTube channels for Rust",
                         url="https://medium.com/best-rust-channels", source="web"),
