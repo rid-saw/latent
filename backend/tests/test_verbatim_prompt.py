@@ -120,6 +120,30 @@ async def test_youtube_topic_search_sends_the_sentence_and_asks_for_videos(monke
     assert seen["plan"] == {"max_items": 2}
 
 
+async def test_the_two_over_fetches_do_not_multiply(monkeypatch):
+    """The graph already padded the count; padding the padding asked for 27.
+
+    max_results arrives here already tripled (3 shown -> 9). Tripling again
+    asked a search for 27 pages to fill a block of three and binned 24 of
+    them a second later.
+    """
+    asked = {}
+
+    async def fake_search(query, max_results=3, **kw):
+        asked["n"] = max_results
+        return []
+
+    monkeypatch.setattr(websearch.client, "search_web", fake_search)
+    from app.integrations.youtube import client as yt
+
+    await yt.search_videos("a topic", max_results=9)
+    assert asked["n"] == yt.MAX_WEB_PAGES == 12, "the over-fetches compounded again"
+
+    # Small requests are untouched — the cap only bites once padding stacks.
+    await yt.search_videos("a topic", max_results=3)
+    assert asked["n"] == 9
+
+
 def test_a_verbatim_source_never_runs_a_second_round():
     """Round 2 would send the identical sentence and get identical results."""
     assert _after_critic({"verbatim": True, "approved": False, "iterations": 1}) == "done"

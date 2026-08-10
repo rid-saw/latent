@@ -43,6 +43,11 @@ _CANONICAL_RE = re.compile(
 
 _ENTRY_RE = re.compile(r"<entry>(.*?)</entry>", re.S)
 
+# Ceiling on pages requested for a topic search. Enough that the non-video
+# results can be filtered out and still leave the block full; low enough that
+# the search isn't scraping the bottom of the barrel for pages nobody reads.
+MAX_WEB_PAGES = 12
+
 
 def _tag(entry: str, name: str) -> str:
     m = re.search(rf"<{name}[^>]*>(.*?)</{name}>", entry, re.S)
@@ -126,9 +131,16 @@ async def _search_videos_on_the_web(
     """
     from app.integrations.websearch.client import search_web  # lazy: import cycle
 
-    # Over-fetch: roughly half of what comes back is usually not a video.
+    # Over-fetch, because roughly half of what a web search returns is an
+    # article *about* videos rather than a video — but capped, because
+    # max_results arrives already tripled by the graph's own over-fetch.
+    # Tripling it again asked a search for 27 pages to fill a block of three,
+    # and binned 24 of them a second later.
     hits = await search_web(
-        query, max_results=max_results * 3, plan=plan, videos_only=True
+        query,
+        max_results=min(max_results * 3, MAX_WEB_PAGES),
+        plan=plan,
+        videos_only=True,
     )
 
     seen: set[str] = set()
