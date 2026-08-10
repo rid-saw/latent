@@ -5,6 +5,9 @@ genuinely from Monash, and the critic dropped 7 of them on topical grounds —
 an event invite and a staff notice were judged uninteresting. The block showed
 one email. The user asked about origin, not interest, so nothing there was
 off-topic; and even when a drop is fair, an item ranked lower beats a gap.
+
+Gmail is one of the sources the critic still judges, so these guards are
+live — see JUDGED_SOURCES.
 """
 
 import pytest
@@ -38,30 +41,30 @@ def verdict(monkeypatch):
 
 async def test_backfills_to_max_items(verdict):
     verdict(drop=[1, 2, 3, 4, 5, 6, 7, 8])  # keeps only index 0
-    out = await critic.critic_node({"query": "q", "items": items(9), "max_items": 3})
+    out = await critic.critic_node({"source": "gmail", "query": "q", "items": items(9), "max_items": 3})
     assert [i.id for i in out["items"]] == ["0", "1", "2"], "newest survivors fill the gap"
 
 
 async def test_backfill_preserves_recency_order(verdict):
     verdict(drop=[0, 1])  # the two newest get dropped
-    out = await critic.critic_node({"query": "q", "items": items(4), "max_items": 3})
+    out = await critic.critic_node({"source": "gmail", "query": "q", "items": items(4), "max_items": 3})
     assert [i.id for i in out["items"]] == ["0", "2", "3"], "restored items stay in place"
 
 
 async def test_no_backfill_when_enough_survive(verdict):
     verdict(drop=[3, 4])
-    out = await critic.critic_node({"query": "q", "items": items(5), "max_items": 3})
+    out = await critic.critic_node({"source": "gmail", "query": "q", "items": items(5), "max_items": 3})
     assert [i.id for i in out["items"]] == ["0", "1", "2"], "real drops still apply"
 
 
 async def test_fewer_results_than_asked_for_is_left_alone(verdict):
     """Backfill can only give back what was fetched — it never invents items."""
     verdict(drop=[1])
-    out = await critic.critic_node({"query": "q", "items": items(2), "max_items": 5})
+    out = await critic.critic_node({"source": "gmail", "query": "q", "items": items(2), "max_items": 5})
     assert len(out["items"]) == 2
 
 
 async def test_out_of_range_drop_indexes_are_ignored(verdict):
     verdict(drop=[0, 99, -1])
-    out = await critic.critic_node({"query": "q", "items": items(3), "max_items": 3})
+    out = await critic.critic_node({"source": "gmail", "query": "q", "items": items(3), "max_items": 3})
     assert len(out["items"]) == 3

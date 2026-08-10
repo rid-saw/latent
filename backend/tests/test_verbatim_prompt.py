@@ -144,39 +144,32 @@ async def test_the_two_over_fetches_do_not_multiply(monkeypatch):
     assert asked["n"] == 9
 
 
-def test_a_verbatim_source_never_runs_a_second_round():
-    """Round 2 would send the identical sentence and get identical results."""
-    assert _after_critic({"verbatim": True, "approved": False, "iterations": 1}) == "done"
-    # Unchanged for everything else: a rejected keyword search still retries.
-    assert _after_critic({"approved": False, "iterations": 1}) == "refine"
-    assert _after_critic({"approved": False, "iterations": 2}) == "done"
-    assert _after_critic({"approved": True, "iterations": 1}) == "done"
+async def test_a_verbatim_source_is_never_judged_so_never_loops(monkeypatch):
+    """No critic call means no rejection, which means no second round.
 
-
-async def test_the_critic_never_overwrites_the_stored_request(monkeypatch):
-    """It may still drop bad items — it may not replace the sentence with keywords.
-
-    That string is persisted and reused by every later refresh, so a rewrite
-    here would quietly undo the change on the second fetch rather than the first.
+    That falls out of the source gate rather than needing a rule of its own —
+    and it protects the stored request, which the critic would otherwise be
+    free to replace with keywords. That string is reused by every later
+    refresh, so a rewrite would undo the verbatim change on the second fetch
+    rather than the first.
     """
-    monkeypatch.setattr(
-        "app.agents.nodes.critic.structured_llm",
-        lambda *a, **k: _returns(
-            Critique(approved=False, drop_indexes=[0],
-                     refined_search_terms="australian art auction")
-        ),
-    )
+    def explode(*a, **k):
+        raise AssertionError("the critic was called for a verbatim source")
+
+    monkeypatch.setattr("app.agents.nodes.critic.structured_llm", explode)
     items = [ContentItem(id=str(i), title=f"item {i}", url="https://e.com",
                          source="web") for i in range(6)]
 
-    out = await critic_node({"items": items, "query": REQUEST, "max_items": 3,
-                             "search_terms": REQUEST, "verbatim": True})
-    assert "search_terms" not in out, "the request was replaced with keywords"
-    assert 0 not in [int(i.id) for i in out["items"]], "it should still drop items"
+    out = await critic_node({"source": "web", "items": items, "query": REQUEST,
+                             "max_items": 3, "search_terms": REQUEST})
+    assert out == {"approved": True}, "no judgement, no rewrite, no round two"
+    assert _after_critic({**out, "iterations": 1}) == "done"
 
-    out = await critic_node({"items": items, "query": "x", "max_items": 3,
-                             "search_terms": "old", "verbatim": False})
-    assert out["search_terms"] == "australian art auction", "keyword sources still refine"
+
+def test_the_retry_loop_is_untouched_for_judged_sources():
+    assert _after_critic({"approved": False, "iterations": 1}) == "refine"
+    assert _after_critic({"approved": False, "iterations": 2}) == "done"
+    assert _after_critic({"approved": True, "iterations": 1}) == "done"
 
 
 # ── helpers ───────────────────────────────────────────────────────────────

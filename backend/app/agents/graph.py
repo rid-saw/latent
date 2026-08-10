@@ -8,7 +8,7 @@ from functools import lru_cache
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.nodes.critic import critic_node
+from app.agents.nodes.critic import JUDGED_SOURCES, critic_node
 from app.agents.nodes.supervisor import supervisor_node
 from app.agents.state import BlockAgentState
 from app.integrations.espn.client import search_sports
@@ -31,10 +31,13 @@ _CONNECTORS = {
 }
 
 
-# The critic drops off-topic items, so fetching exactly max_items leaves the
-# block short whenever it prunes anything. Over-fetch and trim afterwards:
-# these connectors are free and keyless, and the critic reads one list either
-# way, so a wider net costs no extra requests.
+# The critic drops off-topic items, so fetching exactly max_items would leave
+# the block short whenever it prunes anything. Over-fetch and trim afterwards.
+#
+# This exists for the critic and nothing else, so it applies only where the
+# critic runs. Everywhere else the spares were fetched, paid for and thrown
+# away — three times the Gmail requests, three times the paper covers scraped,
+# a search asked for nine pages to show three.
 OVERFETCH = 3
 MAX_FETCH = 15
 
@@ -42,7 +45,8 @@ MAX_FETCH = 15
 async def fetch_node(state: BlockAgentState) -> dict:
     source = state["source"]
     terms = state["search_terms"]
-    n = min(state.get("max_items", 3) * OVERFETCH, MAX_FETCH)
+    want = state.get("max_items", 3)
+    n = min(want * OVERFETCH, MAX_FETCH) if source in JUDGED_SOURCES else want
     # The two searches that read the request itself are handed the whole state
     # as context; the keyword connectors below take a string and nothing else.
     if source == "youtube":
@@ -84,11 +88,8 @@ async def fetch_node(state: BlockAgentState) -> dict:
 
 
 def _after_critic(state: BlockAgentState) -> str:
-    if state.get("verbatim"):
-        # This source searched with the user's own sentence, so there is no
-        # term to rewrite. A second round would send the identical string and
-        # get the identical results, an LLM call and a fetch for nothing.
-        return "done"
+    # A source the critic doesn't judge is approved unconditionally, so it
+    # leaves here on the first round without needing a case of its own.
     if state.get("approved") or state.get("iterations", 0) >= MAX_ROUNDS:
         return "done"
     return "refine"

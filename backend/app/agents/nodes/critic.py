@@ -1,9 +1,36 @@
-"""Critic: self-reflection. Verifies fetched items fit the query; can trigger a refetch."""
+"""Critic: self-reflection. Verifies fetched items fit the query; can trigger a refetch.
+
+It runs on some sources and not others. Judging results is worth an LLM call
+where the fetch is a blunt string match against a large noisy index, and worth
+nothing where the fetch is exact or was already made by a model — see
+JUDGED_SOURCES.
+"""
 
 from pydantic import BaseModel, Field
 
 from app.agents.llm import structured_llm
 from app.agents.state import BlockAgentState
+
+# Sources whose results are worth a second opinion.
+#
+#   news    Google News matches strings against everything ever published;
+#           press releases and tangential articles come back routinely
+#   jobs    Seek's keyword match returns senior roles and sales jobs for a
+#           graduate engineering search
+#   papers  OpenAlex can surface papers where the terms appear incidentally,
+#           and its arXiv fallback sorts by date rather than relevance, so an
+#           unrelated recent paper containing all the words ranks first
+#   gmail   a topic search can match the wrong thread
+#
+# Deliberately absent, because a second opinion cannot help:
+#
+#   youtube a named channel's upload feed is that channel by definition, and a
+#           topic search is already filtered to real videos in code
+#   web     the CLI chose these pages against the user's own request; a second
+#           model re-judging the first model's picks mostly costs 20 seconds
+#   sports  the ESPN endpoint returns that league's news and nothing else
+#   site    a pinned URL never reaches the agent at all
+JUDGED_SOURCES = {"news", "jobs", "papers", "gmail"}
 
 PROMPT = """You are the quality gate for a content dashboard block.
 
@@ -16,12 +43,12 @@ Judge whether they serve the request. Drop items that are off-topic, spammy, or 
 clickbait (by index).
 
 IMPORTANT exception — origin requests. If the request names where content \
-should come FROM (a channel, publication, person, organisation, or email \
-sender) — "emails from monash uni", "latest from Fireship" — then origin and \
-recency are the ONLY criteria. Keep every item genuinely from that source no \
-matter how varied or mundane its subject. Newsletters, event invites, admin \
-notices and reminders all belong. Judging those on interest answers a question \
-the user did not ask, and leaves the block empty.
+should come FROM (a publication, person, organisation, or email sender) — \
+"emails from monash uni", "anything from Nature" — then origin and recency \
+are the ONLY criteria. Keep every item genuinely from that source no matter \
+how varied or mundane its subject. Newsletters, event invites, admin notices \
+and reminders all belong. Judging those on interest answers a question the \
+user did not ask, and leaves the block empty.
 
 If the overall set is weak and different search terms would likely do better, \
 set approved=false and provide refined_search_terms.
@@ -44,6 +71,8 @@ class Critique(BaseModel):
 
 async def critic_node(state: BlockAgentState) -> dict:
     items = state.get("items", [])
+    if state.get("source") not in JUDGED_SOURCES:
+        return {"approved": True}
     if not items:
         # Nothing fetched (e.g. connector not authed) — nothing to critique.
         return {"approved": True}
@@ -74,11 +103,6 @@ async def critic_node(state: BlockAgentState) -> dict:
 
     kept = [items[i] for i in keep]
     update: dict = {"approved": critique.approved, "items": kept}
-    # Dropping off-topic items is worth doing for every source. Rewriting the
-    # search is not: a verbatim source holds the user's own sentence here, it
-    # will not be refetched, and this string is persisted and reused by every
-    # later refresh — so overwriting it with keywords would quietly undo the
-    # whole point of sending the request intact.
-    if not critique.approved and critique.refined_search_terms and not state.get("verbatim"):
+    if not critique.approved and critique.refined_search_terms:
         update["search_terms"] = critique.refined_search_terms
     return update
