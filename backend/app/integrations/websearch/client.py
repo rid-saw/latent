@@ -16,6 +16,7 @@ it as context rather than replacing it.
 """
 
 import logging
+import re
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
@@ -95,6 +96,21 @@ def plan_context(plan: dict | None) -> str:
     return "\nAlso worked out from that same request:\n" + "\n".join(rows) + "\n"
 
 
+# Only for the news fallback below. Google News takes keywords, not sentences,
+# so the string that suits the CLI is the wrong shape for it.
+_FILLER = re.compile(
+    r"\b(i|would|like|want|to|the|a|an|of|for|and|with|in|on|at|about|all|any|"
+    r"that|this|these|those|please|show|me|my|find|get|track|keep|up|"
+    r"latest|recent|new|newest|over|under|within)\b",
+    re.I,
+)
+
+
+def _news_query(request: str, limit: int = 8) -> str:
+    words = [w for w in re.split(r"\W+", _FILLER.sub(" ", request)) if len(w) > 1]
+    return " ".join(words[:limit]) or request
+
+
 async def _via_cli(
     query: str, max_results: int, plan: dict | None, videos_only: bool
 ) -> list[ContentItem]:
@@ -140,7 +156,7 @@ async def search_web(
         items = await _via_cli(query, max_results, plan, videos_only)
     except Exception:
         logging.warning("web search unavailable, falling back to news", exc_info=True)
-        return await search_news(query, max_results=max_results)
+        return await search_news(_news_query(query), max_results=max_results)
 
     # An empty search is a real answer, but news is more useful than a blank card.
-    return items or await search_news(query, max_results=max_results)
+    return items or await search_news(_news_query(query), max_results=max_results)
