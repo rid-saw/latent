@@ -44,7 +44,12 @@ def routing() -> str:
 
 def searching(source: str, terms: str) -> str:
     where = PLACE.get(source, "the web")
-    return f"Searching {where} for “{terms}”" if terms else f"Searching {where}"
+    if not terms:
+        return f"Searching {where}"
+    # web and youtube-topic search with the user's whole sentence, which can be
+    # a paragraph. The search gets all of it; this line only has a card's width.
+    shown = terms if len(terms) <= 64 else terms[:63].rstrip(" ,.;:") + "…"
+    return f"Searching {where} for “{shown}”"
 
 
 def reviewing(source: str, n: int) -> str:
