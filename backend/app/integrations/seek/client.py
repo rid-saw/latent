@@ -27,10 +27,24 @@ def _meta(job: dict) -> str:
 
 
 def _summary(job: dict) -> str | None:
-    salary = job.get("salaryLabel") or ""
-    teaser = job.get("teaser") or ""
-    text = " — ".join(p for p in (salary, teaser) if p)
-    return text[:220] or None
+    return (job.get("teaser") or "")[:220] or None
+
+
+def _fields(job: dict) -> dict[str, str]:
+    """What a listing actually says, kept as values rather than run together.
+
+    Seek returns these separately and they were being flattened into one grey
+    line of prose. The bullet points in particular are the advertiser's own
+    summary of the role and were dropped entirely.
+    """
+    out: dict[str, str] = {}
+    if salary := job.get("salaryLabel"):
+        out["salary"] = salary
+    if work := [w for w in (job.get("workTypes") or []) if w]:
+        out["type"] = ", ".join(work)
+    if bullets := [b for b in (job.get("bulletPoints") or []) if b]:
+        out["highlights"] = " · ".join(bullets[:3])
+    return out
 
 
 async def search_jobs(
@@ -58,6 +72,7 @@ async def search_jobs(
             source="jobs",
             meta=_meta(job),
             summary=_summary(job),
+            fields=_fields(job) or None,
             thumbnail=(job.get("branding") or {}).get("serpLogoUrl"),
         )
         for job in jobs[:max_results]

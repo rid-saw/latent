@@ -60,6 +60,28 @@ async def _add_thumbnails(items: list[ContentItem]) -> None:
         item.thumbnail = image
 
 
+def _paper_fields(w: dict) -> dict[str, str]:
+    """The parts of an OpenAlex record worth seeing on the card.
+
+    All of this arrives with every result and used to be discarded. Citations
+    especially: "recent high-traffic papers" was the request this project was
+    built to answer, and the traffic number was already on the page.
+    """
+    out: dict[str, str] = {}
+    if (cites := w.get("cited_by_count")) is not None:
+        out["citations"] = f"{cites:,}"
+    if names := [
+        (a.get("author") or {}).get("display_name") for a in (w.get("authorships") or [])
+    ]:
+        first = names[0] or "Unknown"
+        out["authors"] = first if len(names) == 1 else f"{first} +{len(names) - 1}"
+    if (w.get("open_access") or {}).get("is_oa"):
+        out["access"] = "open"
+    if topics := [t.get("display_name") for t in (w.get("topics") or [])[:1] if t]:
+        out["topic"] = topics[0]
+    return out
+
+
 async def _from_openalex(query: str, max_results: int) -> list[ContentItem]:
     since = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
     async with httpx.AsyncClient(timeout=15) as client:
@@ -91,6 +113,7 @@ async def _from_openalex(query: str, max_results: int) -> list[ContentItem]:
                 source="papers",
                 summary=(abstract[:220] + "…") if len(abstract) > 220 else abstract or None,
                 meta=f"{venue} · {w.get('publication_date', '')}",
+                fields=_paper_fields(w) or None,
             )
         )
     return items

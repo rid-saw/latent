@@ -51,13 +51,20 @@ async def search_messages(query: str, max_results: int = 3) -> list[ContentItem]
                 short_date = parsedate_to_datetime(hdrs["Date"]).strftime("%d %b %Y")
             except (KeyError, ValueError, TypeError):
                 short_date = ""
+            sender = _from_name(hdrs.get("From", ""))
             return ContentItem(
                 id=msg["id"],
                 title=hdrs.get("Subject", "(no subject)"),
                 url=f"https://mail.google.com/mail/u/0/#inbox/{msg['id']}",
                 source="gmail",
                 summary=msg.get("snippet"),
-                meta=f"{_from_name(hdrs.get('From', ''))} · {short_date}",
+                # Who and when are the two things you scan an inbox by, so
+                # they get their own values rather than being run together
+                # into one line that has to be read to be understood.
+                fields={
+                    k: v for k, v in (("from", sender), ("date", short_date)) if v
+                }
+                or None,
             )
 
         return list(await asyncio.gather(*(fetch_one(r) for r in refs)))

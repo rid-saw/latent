@@ -51,6 +51,18 @@ async def search_papers(query: str, max_results: int = 5) -> list[ContentItem]:
         published = entry.findtext("atom:published", "", NS)[:10]
         primary = entry.find("arxiv:primary_category", NS)
         category = primary.get("term") if primary is not None else "arXiv"
+        # OpenAlex rate-limits often enough that this fallback is a normal
+        # path, not a rare one. Without fields of its own, a 429 upstream
+        # would quietly turn a populated card into a bare one.
+        names = [
+            n for a in entry.findall("atom:author", NS)
+            if (n := a.findtext("atom:name", "", NS))
+        ]
+        fields = {"access": "open (preprint)"}
+        if names:
+            fields["authors"] = (
+                names[0] if len(names) == 1 else f"{names[0]} +{len(names) - 1}"
+            )
         items.append(
             ContentItem(
                 id=link.rsplit("/", 1)[-1],
@@ -59,6 +71,7 @@ async def search_papers(query: str, max_results: int = 5) -> list[ContentItem]:
                 source="papers",
                 summary=abstract[:220] + ("…" if len(abstract) > 220 else ""),
                 meta=f"arXiv · {category} · {published}",
+                fields=fields,
             )
         )
     return items
