@@ -222,11 +222,7 @@ async def test_an_answer_survives_without_a_link_but_a_page_does_not(monkeypatch
     async def uncited(prompt, schema, web=False):
         return ws._Hits(results=[ws._Hit(title="17°C", url="", summary="Melbourne")])
 
-    async def no_news(query, max_results=3):
-        return []
-
     monkeypatch.setattr("app.agents.llm.structured_llm", uncited)
-    monkeypatch.setattr(ws, "search_news", no_news)
 
     assert len(await ws.search_web("q", 3, fmt="stat")) == 1, "the answer survives"
     assert await ws.search_web("q", 3, fmt="links") == [], "the page does not"

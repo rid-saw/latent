@@ -1,8 +1,11 @@
-"""The web connector must degrade to news rather than show a blank card.
+"""The web connector answers, or says it couldn't. It never substitutes.
 
-`web` is the catch-all source, so it runs on backends whose CLI cannot search
-at all. Whenever the search can't answer, the block falls back to Google News
-RSS: worse than a real search, but never worse than before search existed.
+`web` is the catch-all source and the only one that can hold an answer rather
+than a list of pages. Google News used to stand in whenever the search failed,
+from when a web block was a list of links and headlines were a fair
+substitute. They are not a substitute for an answer: "how do I make cold brew"
+served with news articles about coffee is not a worse answer, it is a
+different thing wearing the shape of one. An empty block is the honest report.
 
 No network and no LLM here; the CLI call is stubbed so the tests assert on our
 handling rather than on what a live search happens to return today.
@@ -12,21 +15,6 @@ import pytest
 
 from app.agents import llm
 from app.integrations.websearch import client as websearch
-from app.models.schemas import ContentItem
-
-
-def news_item(title: str = "from news") -> ContentItem:
-    return ContentItem(id="n1", title=title, url="https://news.example", source="news")
-
-
-@pytest.fixture
-def news_fallback(monkeypatch):
-    """Stub the news connector so a fallback is obvious in assertions."""
-
-    async def fake_news(query, max_results=3):
-        return [news_item()]
-
-    monkeypatch.setattr(websearch, "search_news", fake_news)
 
 
 def stub_search(monkeypatch, hits=None, raises=None):
@@ -46,7 +34,7 @@ def test_site_strips_www_and_path():
     assert websearch._site("https://docs.python.org/3/") == "docs.python.org"
 
 
-async def test_search_results_become_items(monkeypatch, news_fallback):
+async def test_search_results_become_items(monkeypatch):
     stub_search(monkeypatch, hits=[
         websearch._Hit(title="ANZ housing outlook", url="https://www.anz.com.au/x",
                        summary="Forecast.", published="April 2026"),
@@ -57,26 +45,31 @@ async def test_search_results_become_items(monkeypatch, news_fallback):
     assert items[0].meta == "anz.com.au · April 2026"
 
 
-async def test_backend_without_search_falls_back_to_news(monkeypatch, news_fallback):
-    """A CLI that can't search must not answer from memory with invented URLs."""
+async def test_a_backend_that_cannot_search_returns_nothing(monkeypatch):
+    """Codex has no web search. Answering from memory would mean invented URLs,
+    and answering with headlines would mean answering a different question."""
     stub_search(monkeypatch, raises=llm.WebSearchUnavailable("codex cannot search"))
-    items = await websearch.search_web("best mechanical keyboards")
-    assert [i.source for i in items] == ["news"]
+    assert await websearch.search_web("best mechanical keyboards") == []
 
 
-async def test_search_failure_falls_back_to_news(monkeypatch, news_fallback):
+async def test_a_failed_search_returns_nothing(monkeypatch):
     stub_search(monkeypatch, raises=RuntimeError("claude exited 1"))
-    items = await websearch.search_web("anything")
-    assert [i.source for i in items] == ["news"]
+    assert await websearch.search_web("anything") == []
 
 
-async def test_empty_search_falls_back_to_news(monkeypatch, news_fallback):
+async def test_an_empty_search_returns_nothing(monkeypatch):
     stub_search(monkeypatch, hits=[])
-    items = await websearch.search_web("query with no good pages")
-    assert [i.source for i in items] == ["news"]
+    assert await websearch.search_web("query with no good pages") == []
 
 
-async def test_non_http_urls_are_dropped(monkeypatch, news_fallback):
+@pytest.mark.parametrize("fmt", ["links", "table", "steps", "stat", "text"])
+async def test_no_format_gets_a_substitute(monkeypatch, fmt):
+    """Whatever shape was asked for, an empty answer stays empty."""
+    stub_search(monkeypatch, hits=[])
+    assert await websearch.search_web("q", fmt=fmt, fields=["price"]) == []
+
+
+async def test_non_http_urls_are_dropped(monkeypatch):
     """A hallucinated bare title must never reach the card as a link."""
     stub_search(monkeypatch, hits=[
         websearch._Hit(title="real", url="https://example.com/a"),
@@ -86,7 +79,7 @@ async def test_non_http_urls_are_dropped(monkeypatch, news_fallback):
     assert [i.title for i in items] == ["real"]
 
 
-async def test_respects_max_results(monkeypatch, news_fallback):
+async def test_respects_max_results(monkeypatch):
     stub_search(monkeypatch, hits=[
         websearch._Hit(title=f"hit {n}", url=f"https://example.com/{n}") for n in range(9)
     ])

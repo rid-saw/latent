@@ -24,12 +24,10 @@ spliced in and the answer comes back already in that form.
 """
 
 import logging
-import re
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
-from app.integrations.news.client import search_news
 from app.models.schemas import ContentItem
 
 PROMPT = """A personal-dashboard user asked for this, in their own words:
@@ -250,25 +248,13 @@ async def search_web(
     `fields` names the columns, and only applies to "table".
     """
     try:
-        items = await _via_cli(query, max_results, plan, videos_only, fmt, fields or [])
+        return await _via_cli(query, max_results, plan, videos_only, fmt, fields or [])
     except Exception:
-        logging.warning("web search unavailable, falling back to news", exc_info=True)
-        items = []
-    if items:
-        return items
-    if fmt != "links":
+        # Nothing to fall back to, deliberately. Google News used to stand in
+        # here, from when a web block was a list of pages and headlines were a
+        # fair substitute. Now the block holds the answer, and "how do I make
+        # cold brew" answered with news articles about coffee is not a worse
+        # answer, it is a different thing wearing the shape of one. An empty
+        # block says what actually happened.
+        logging.warning("web search failed for %r", query[:80], exc_info=True)
         return []
-    return await search_news(_news_query(query), max_results=max_results)
-
-
-_FILLER = re.compile(
-    r"\b(i|would|like|want|to|the|a|an|of|for|and|with|in|on|at|about|all|any|"
-    r"that|this|these|those|please|show|me|my|find|get|track|keep|up|"
-    r"latest|recent|new|newest|over|under|within)\b",
-    re.I,
-)
-
-
-def _news_query(request: str, limit: int = 8) -> str:
-    words = [w for w in re.split(r"\W+", _FILLER.sub(" ", request)) if len(w) > 1]
-    return " ".join(words[:limit]) or request
