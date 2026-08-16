@@ -1,98 +1,38 @@
-"""Block agent: supervisor -> fetch -> critic, with a bounded reflection loop.
+"""Block agent: the supervisor routes, the connector fetches.
 
-  START -> supervisor -> fetch -> critic -> (approved or 2 rounds) -> END
-                           ^________________| (refined search terms)
+  START -> supervisor -> fetch -> END
+
+There was a second agent here — a critic that read the fetched items, dropped
+the ones it judged off topic, and could rewrite the search terms for one more
+round. It was removed after being measured: across four blocks it changed
+nothing the user could see, while costing an LLM call every time.
+
+That was not bad luck. It could only delete, never reorder, so it could only
+change a block by killing something inside the first max_items — and anything
+below that was going to be trimmed away regardless. To have any effect at all
+it needed the fetch to pull three times what the block showed, and two guards
+existed solely to undo its mistakes: one put items back when it pruned a block
+below the requested count, another threw away a second round that returned
+less than the first. Deleting it took all of that with it.
 """
 
 from functools import lru_cache
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.nodes.critic import JUDGED_SOURCES, critic_node
 from app.agents.nodes.supervisor import supervisor_node
 from app.agents.state import BlockAgentState
-from app.integrations.espn.client import search_sports
-from app.integrations.papers.client import search_papers
-from app.integrations.gmail.client import search_messages
-from app.integrations.news.client import search_news
-from app.integrations.seek.client import search_jobs
-from app.integrations.websearch.client import search_web
-from app.integrations.youtube.client import search_videos
-
-MAX_ROUNDS = 2
-
-# Connectors that take a keyword string and nothing else. youtube, web and
-# jobs need more than that and are called directly in fetch_node.
-_CONNECTORS = {
-    "papers": search_papers,
-    "gmail": search_messages,
-    "news": search_news,
-    "sports": search_sports,
-}
-
-
-# The critic drops off-topic items, so fetching exactly max_items would leave
-# the block short whenever it prunes anything. Over-fetch and trim afterwards.
-#
-# This exists for the critic and nothing else, so it applies only where the
-# critic runs. Everywhere else the spares were fetched, paid for and thrown
-# away — three times the Gmail requests, three times the paper covers scraped,
-# a search asked for nine pages to show three.
-OVERFETCH = 3
-MAX_FETCH = 15
+from app.services.fetch import fetch_for
 
 
 async def fetch_node(state: BlockAgentState) -> dict:
-    source = state["source"]
-    terms = state["search_terms"]
-    want = state.get("max_items", 3)
-    n = min(want * OVERFETCH, MAX_FETCH) if source in JUDGED_SOURCES else want
-    # The two searches that read the request itself are handed the whole state
-    # as context; the keyword connectors below take a string and nothing else.
-    if source == "youtube":
-        items = await search_videos(
-            terms,
-            max_results=n,
-            latest=state.get("wants_latest", False),
-            channel=state.get("channel", ""),
-            plan=state,
-        )
-    elif source == "web":
-        items = await search_web(terms, max_results=n, plan=state)
-    elif source == "jobs":
-        items = await search_jobs(
-            terms,
-            max_results=n,
-            location=state.get("location", ""),
-            latest=state.get("wants_latest", False),
-        )
-    elif connector := _CONNECTORS.get(source):
-        items = await connector(terms, max_results=n)
-    else:
-        items = []
+    """Hand the supervisor's answers to the one dispatcher and keep the items.
 
-    round_n = state.get("iterations", 0) + 1
-    prev = state.get("items") or []
-    # A refinement that returns less than the round before it made things
-    # worse. Keep the better set and the terms that found it: those terms are
-    # persisted on the block and reused by every later refresh, so accepting a
-    # regression here breaks the block permanently, not just once.
-    if round_n > 1 and len(items) < len(prev):
-        return {
-            "items": prev,
-            "search_terms": state.get("prev_terms") or terms,
-            "iterations": round_n,
-            "regressed": True,
-        }
-    return {"items": items, "prev_terms": terms, "iterations": round_n}
-
-
-def _after_critic(state: BlockAgentState) -> str:
-    # A source the critic doesn't judge is approved unconditionally, so it
-    # leaves here on the first round without needing a case of its own.
-    if state.get("approved") or state.get("iterations", 0) >= MAX_ROUNDS:
-        return "done"
-    return "refine"
+    Deliberately thin. Refresh runs the same function off the plan stored on
+    the block, and the two paths drifting apart is what let a refresh quietly
+    return something plainer than what was created.
+    """
+    return {"items": await fetch_for(dict(state))}
 
 
 @lru_cache
@@ -100,13 +40,11 @@ def get_graph():
     g = StateGraph(BlockAgentState)
     g.add_node("supervisor", supervisor_node)
     g.add_node("fetch", fetch_node)
-    g.add_node("critic", critic_node)
     g.add_edge(START, "supervisor")
     g.add_edge("supervisor", "fetch")
-    g.add_edge("fetch", "critic")
-    g.add_conditional_edges("critic", _after_critic, {"refine": "fetch", "done": END})
+    g.add_edge("fetch", END)
     return g.compile()
 
 
 async def run_block_agent(query: str) -> BlockAgentState:
-    return await get_graph().ainvoke({"query": query, "iterations": 0})
+    return await get_graph().ainvoke({"query": query})

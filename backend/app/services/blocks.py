@@ -13,16 +13,7 @@ from fastapi import HTTPException
 
 from app.services import progress
 
-from app.integrations.espn.client import search_sports
-from app.integrations.gmail.client import search_messages
-from app.integrations.news.client import search_news
-from app.integrations.papers.client import search_papers
-from app.integrations.seek.client import search_jobs
-from app.integrations.websearch.client import search_web
-from app.integrations.website.client import fetch_site
-from app.integrations.youtube.client import search_videos
-
-_URL_RE = re.compile(r"https?://\S+|www\.\S+", re.I)
+from app.services.fetch import URL_RE as _URL_RE, fetch_for
 from app.models.schemas import Block, BlockLayout, ContentItem, SourceKind
 
 _PATTERNS: list[tuple[SourceKind, re.Pattern]] = [
@@ -70,72 +61,57 @@ def default_max_items(source: SourceKind) -> int:  # noqa: ARG001 — uniform fo
     return 3
 
 
-async def fetch_items(query: str, source: SourceKind, max_items: int = 3) -> list[ContentItem]:
-    if source == "site":
-        m = _URL_RE.search(query)
-        return await fetch_site(m.group(0)) if m else []
-    if source == "youtube":
-        latest = bool(re.search(r"latest|newest|recent|new video", query, re.I))
-        return await search_videos(query, max_results=max_items, latest=latest)
-    if source == "papers":
-        return await search_papers(query, max_results=max_items)
-    if source == "gmail":
-        return await search_messages(query, max_results=max_items)
-    if source == "news":
-        return await search_news(query, max_results=max_items)
-    if source == "jobs":
-        return await search_jobs(query, max_results=max_items)
-    if source == "sports":
-        return await search_sports(query, max_results=max_items)
-    if source == "web":
-        return await search_web(query, max_results=max_items)
-
-
-async def safe_fetch(
-    query: str, source: SourceKind, max_items: int = 3
-) -> tuple[list[ContentItem], str]:
-    """Fetch items; a connector failure degrades the block, never the request."""
+async def safe_fetch(plan: dict) -> tuple[list[ContentItem], str]:
+    """Fetch what `plan` describes; a connector failure degrades the block,
+    never the request."""
     try:
-        return await fetch_items(query, source, max_items), "ready"
+        return await fetch_for(plan), "ready"
     except HTTPException:
         raise  # auth errors (401) should surface as-is
     except Exception:
-        logging.exception("fetch_items failed for source=%s", source)
+        logging.exception("fetch failed for source=%s", plan.get("source"))
         return [], "error"
+
+
+def plan_without_an_agent(query: str) -> dict:
+    """The plan a block gets when no agent produced one.
+
+    A pasted URL needs no routing, and a machine with no CLI installed has no
+    agent to do it. Both still fetch through the same dispatcher, so both need
+    a plan — the difference is that a regex filled it in.
+    """
+    if URL := _URL_RE.search(query):
+        return {"source": "site", "search_terms": URL.group(0), "max_items": 1}
+    source = infer_source(query)
+    return {
+        "source": source,
+        "search_terms": query,
+        "max_items": default_max_items(source),
+    }
 
 
 async def create_block(query: str) -> Block:
     from app.agents.llm import agents_enabled  # lazy: avoid import cycle
 
-    # A pasted URL means "pin this site" — no routing or LLM needed.
-    if _URL_RE.search(query):
-        items, status = await safe_fetch(query, "site", 1)
-        return Block(
-            id=str(uuid.uuid4()),
-            title=(items[0].meta or title_from(query)) if items else title_from(query),
-            query=query,
-            source="site",
-            layout=default_layout("site"),
-            items=items,
-            status=status,
-            max_items=1,
-        )
-
-    if agents_enabled():
+    # A pasted URL means "pin this site" — no routing or LLM needed. Neither
+    # is there anything to route with when no CLI is installed.
+    if agents_enabled() and not _URL_RE.search(query):
         return await _create_block_agentic(query)
 
-    source = infer_source(query)
-    max_items = default_max_items(source)
-    items, status = await safe_fetch(query, source, max_items)
+    plan = plan_without_an_agent(query)
+    items, status = await safe_fetch(plan)
+    source: SourceKind = plan["source"]
+    pinned = source == "site" and items
     return Block(
         id=str(uuid.uuid4()),
-        title=title_from(query),
+        title=(items[0].meta or title_from(query)) if pinned else title_from(query),
         query=query,
+        plan=plan,
         source=source,
         layout=default_layout(source),
         items=items,
         status=status,
-        max_items=max_items,
+        max_items=plan["max_items"],
     )
 
 
@@ -148,9 +124,9 @@ def placeholder_block(query: str, status: str = "loading") -> Block:
     inserting at the end.
 
     Source is a keyword guess, good enough to size the card until routing
-    replaces it. search_terms stays empty, which is also the signal that a
-    retry must re-run the agent rather than refetch — there is nothing to
-    refetch until routing has happened.
+    replaces it. The plan stays empty, which is also the signal that a retry
+    must re-run the agent rather than refetch — there is nothing to refetch
+    until routing has happened.
     """
     source: SourceKind = "site" if _URL_RE.search(query) else infer_source(query)
     return Block(
@@ -165,14 +141,24 @@ def placeholder_block(query: str, status: str = "loading") -> Block:
     )
 
 
+# The agent's working state minus the parts that are not decisions: the
+# original prompt, and the results themselves.
+_NOT_A_DECISION = {"query", "items"}
+
+
 def _block_from(state: dict, query: str, status: str) -> Block:
     source: SourceKind = state.get("source", "web")
     max_items = state.get("max_items") or default_max_items(source)
+    # Everything the supervisor decided, kept whole. Copying named fields out
+    # one at a time is what let a refresh lose the ones nobody remembered.
+    plan = {k: v for k, v in state.items() if k not in _NOT_A_DECISION}
+    plan.setdefault("source", source)
+    plan.setdefault("max_items", max_items)
     return Block(
         id=str(uuid.uuid4()),
         title=state.get("title") or title_from(query),
         query=query,
-        search_terms=state.get("search_terms") or "",
+        plan=plan,
         source=source,
         layout=default_layout(source),
         items=(state.get("items") or [])[:max_items],
@@ -188,10 +174,8 @@ async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]
     Progress comes from the graph's own node updates, so a line is only shown
     once the step it describes has actually happened.
 
-    The preview exists because results are ready the moment the fetch returns,
-    but the critic then spends about as long again judging them. Waiting for
-    that doubles the time before anything is on screen, so the raw results go
-    out first and the checked version replaces them in place.
+    The preview goes out the moment the fetch returns, ahead of the saved
+    block, so the card has something on it as early as possible.
     """
     from app.agents.llm import agents_enabled  # lazy: avoid import cycle
 
@@ -202,28 +186,22 @@ async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]
         yield "block", await create_block(query)
         return
 
-    from app.agents.graph import MAX_ROUNDS, get_graph
+    from app.agents.graph import get_graph
 
     yield "progress", progress.routing()
     state: dict = {}
     try:
         async for chunk in get_graph().astream(
-            {"query": query, "iterations": 0}, stream_mode="updates"
+            {"query": query}, stream_mode="updates"
         ):
             for node, update in chunk.items():
                 state.update(update)
-                source = state.get("source", "web")
                 if node == "supervisor":
-                    yield "progress", progress.searching(source, state["search_terms"])
-                elif node == "fetch":
-                    yield "progress", progress.reviewing(source, len(state.get("items") or []))
-                    # Show the raw results now rather than after the critic.
-                    if state.get("items"):
-                        yield "preview", _block_from(state, query, status="loading")
-                elif node == "critic" and not state.get("approved"):
-                    # Only narrate a refinement that's actually about to happen.
-                    if state.get("iterations", 0) < MAX_ROUNDS:
-                        yield "progress", progress.refining(state["search_terms"])
+                    yield "progress", progress.searching(
+                        state.get("source", "web"), state["search_terms"]
+                    )
+                elif node == "fetch" and state.get("items"):
+                    yield "preview", _block_from(state, query, status="loading")
     except HTTPException:
         raise
     except Exception:
@@ -237,44 +215,26 @@ async def create_block_streaming(query: str) -> AsyncIterator[tuple[str, object]
 
 
 async def _create_block_agentic(query: str) -> Block:
-    """LangGraph path: supervisor routes, connector fetches, critic verifies."""
+    """LangGraph path: the supervisor routes, the connector fetches."""
     from app.agents.graph import run_block_agent
 
     try:
-        state = await run_block_agent(query)
-        source: SourceKind = state["source"]
-        max_items = state.get("max_items") or default_max_items(source)
-        # The graph over-fetches so the critic has slack to prune; the block
-        # shows only what the user asked for, newest first.
-        items = (state.get("items") or [])[:max_items]
-        return Block(
-            id=str(uuid.uuid4()),
-            title=state.get("title") or title_from(query),
-            query=query,
-            # Persist the supervisor's routing so refreshes reuse it. Without
-            # this, every refresh re-searched with the user's raw sentence and
-            # quietly replaced good results with junk.
-            search_terms=state.get("search_terms") or "",
-            source=source,
-            layout=default_layout(source),
-            items=items,
-            status="ready",
-            max_items=max_items,
-        )
+        return _block_from(await run_block_agent(query), query, status="ready")
     except HTTPException:
         raise
     except Exception:
-        logging.exception("agent path failed; falling back to regex inference")
-        source = infer_source(query)
-        max_items = default_max_items(source)
-        items, status = await safe_fetch(query, source, max_items)
+        logging.exception("agent path failed; falling back to keyword routing")
+        plan = plan_without_an_agent(query)
+        items, status = await safe_fetch(plan)
+        source: SourceKind = plan["source"]
         return Block(
             id=str(uuid.uuid4()),
             title=title_from(query),
             query=query,
+            plan=plan,
             source=source,
             layout=default_layout(source),
             items=items,
             status=status,
-            max_items=max_items,
+            max_items=plan["max_items"],
         )

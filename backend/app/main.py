@@ -28,10 +28,35 @@ with engine.connect() as _conn:
         if column not in cols:
             _conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
 
+    def _columns(table: str) -> set[str]:
+        return {r[1] for r in _conn.execute(text(f"PRAGMA table_info({table})"))}
+
     _add_column("blocks", "max_items", "max_items INTEGER NOT NULL DEFAULT 3")
-    # Blocks predating this column refresh with their raw query (see below).
-    _add_column("blocks", "search_terms", "search_terms TEXT NOT NULL DEFAULT ''")
     _add_column("blocks", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
+    _add_column("blocks", "plan", "plan JSON NOT NULL DEFAULT '{}'")
+
+    # search_terms, fields and format were columns of their own until the
+    # supervisor's answers were kept together in `plan`. Fold any that exist
+    # into it, then drop them: they are NOT NULL with no database-level
+    # default, so leaving them behind makes every new insert fail.
+    _legacy = {"search_terms", "fields", "format"} & _columns("blocks")
+    if _legacy:
+        _conn.execute(text(
+            "UPDATE blocks SET plan = json_object("
+            "  'search_terms', COALESCE(search_terms, ''),"
+            "  'fields', json(COALESCE(NULLIF(fields, ''), '[]')),"
+            "  'format', COALESCE(format, 'links'),"
+            "  'source', source,"
+            "  'max_items', max_items"
+            ") WHERE plan = '{}' OR plan IS NULL"
+        ) if _legacy == {"search_terms", "fields", "format"} else text(
+            "UPDATE blocks SET plan = json_object("
+            "  'search_terms', COALESCE(search_terms, ''),"
+            "  'source', source, 'max_items', max_items"
+            ") WHERE plan = '{}' OR plan IS NULL"
+        ))
+        for _col in _legacy:
+            _conn.execute(text(f"ALTER TABLE blocks DROP COLUMN {_col}"))
     _add_column("briefings", "page_id", "page_id TEXT NOT NULL DEFAULT 'default'")
     _add_column("pages", "emoji", "emoji TEXT NOT NULL DEFAULT 'file-text'")
     # Emoji era -> lucide icon names; migrate known defaults once.

@@ -21,7 +21,7 @@ export interface PendingBlock {
   pageId: string; // which page it belongs to, so it doesn't follow you around
   query: string;
   steps: string[]; // agent progress, newest last
-  preview: Block | null; // raw results, before the critic has judged them
+  preview: Block | null; // results, shown as soon as the fetch returns
   error: string | null;
   layout: BlockLayout;
   resized: boolean; // user set the size; don't overwrite it with the default
@@ -205,11 +205,11 @@ export const useBlocks = create<BlocksState>((set, get) => ({
   async retry(id) {
     const block = get().blocks.find((b) => b.id === id);
     if (!block) return;
-    // No search terms means routing never finished, so there is nothing to
-    // refetch — it has to be built from the query again. That is the same
-    // work as creating it, so it goes back through the same narrated path
-    // and reappears as a card showing the agent's steps.
-    if (block.search_terms) return get().refresh(id);
+    // No plan means routing never finished, so there is nothing to refetch —
+    // it has to be built from the query again. That is the same work as
+    // creating it, so it goes back through the same narrated path and
+    // reappears as a card showing the agent's steps.
+    if (block.plan?.search_terms) return get().refresh(id);
 
     if (isOffline()) {
       toast(OFFLINE);
@@ -333,6 +333,15 @@ async function runCreate(
         })),
     });
   } catch (e) {
+    // Deleted while it was being built. The rescue below assumes the row
+    // still exists; here it deliberately doesn't, and putting the block back
+    // would resurrect the thing the user just removed — as a duplicate the
+    // database has no row for, which then 404s on every later action and
+    // vanishes on reload.
+    if (e instanceof ApiError && e.status === 410) {
+      set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }));
+      return;
+    }
     // Two ways to end up with a real row here: the backend reported the
     // failure and sent the block with it, or it wrote the row up front and
     // the connection died before it could tell us anything else. Either way
