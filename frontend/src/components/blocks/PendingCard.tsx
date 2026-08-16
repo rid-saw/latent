@@ -6,9 +6,8 @@ import { BlockCard } from "./BlockCard";
 
 /** A block being built, shown on the grid so the dashboard stays usable.
  *
- * Three states: the agent's steps while it works, the raw results once they
- * exist (the critic is still judging them, so the card says so), and the
- * error if it failed. */
+ * Three states: the agent's steps while it works, the results once they
+ * exist but before the block is saved, and the error if it failed. */
 export function PendingCard({ pending }: { pending: PendingBlock }) {
   const { dismissPending, retryPending } = useBlocks();
 
@@ -40,15 +39,14 @@ export function PendingCard({ pending }: { pending: PendingBlock }) {
     );
   }
 
-  // Results are in, but the critic may still drop some. Show them anyway —
-  // that's the whole point of the preview — with a quiet note that it isn't
-  // settled, so an item vanishing a moment later isn't a surprise.
+  // Results are in but the block isn't saved yet. Shown straight away, with
+  // a quiet note that it isn't settled.
   if (pending.preview) {
     return (
       <div className="relative h-full">
         <BlockCard block={pending.preview} readOnly />
         <span className="pointer-events-none absolute bottom-2 right-2 z-10 flex items-center gap-1.5 rounded-full bg-card/90 px-2 py-1 text-[10px] text-faint shadow backdrop-blur-sm">
-          <Loader2 size={10} className="animate-spin" /> checking results
+          <Loader2 size={10} className="animate-spin" /> finishing up
         </span>
       </div>
     );

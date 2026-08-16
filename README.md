@@ -33,10 +33,8 @@ You type one sentence. Three steps run behind it.
 ```mermaid
 flowchart LR
     Q["<b>you type</b><br/>'emails from monash uni'"] --> S["<b>supervisor</b><br/>which source?<br/>what search terms?"]
-    S --> F["<b>connector</b><br/>fetches from<br/>Gmail / arXiv / RSS / …"]
-    F --> C["<b>critic</b><br/>are these any good?"]
-    C -->|approved| B["<b>block</b><br/>appears on your grid"]
-    C -->|"weak: retry with better terms<br/>(max 2 rounds)"| F
+    S --> F["<b>connector</b><br/>fetches from<br/>Gmail / arXiv / RSS / the web"]
+    F --> B["<b>block</b><br/>appears on your grid"]
 ```
 
 **1. The supervisor decides where to look.** An LLM reads your request and returns
@@ -50,19 +48,21 @@ possible (OpenAlex for papers, Google News RSS, ESPN, Seek, and YouTube's public
 upload feeds). Only Gmail needs your own OAuth token, because only Gmail reads
 something private.
 
-**3. The critic checks the results.** A second LLM call reviews what came back and
-drops anything off topic. If the whole set is weak, it rewrites the search terms
-and the loop runs again, capped at two rounds so it cannot spin.
-
-Two guard rails sit around that loop, because a self-correcting agent can make
-things worse: a refinement returning fewer results than the round before it is
-rejected and the previous set restored, and pruning can never leave a block with
-fewer items than you asked for.
-
 Every step streams to the browser live over Server-Sent Events, so you watch the
 agent decide instead of staring at a spinner.
 
-### Two design decisions worth explaining
+### Three design decisions worth explaining
+
+**There used to be a second agent, and measuring it is why there isn't.** A
+critic read the fetched items, dropped the ones it judged off topic, and could
+rewrite the search terms for another round. Instrumented over real blocks it
+changed nothing visible, while costing an LLM call every time. It could only
+delete, never reorder, so it could only affect a block by removing something
+inside the first few items — and anything below that was trimmed away anyway.
+To have any effect it needed the fetch to pull three times what the block
+showed, and two guards existed purely to undo its mistakes. Deleting it took
+all of that with it, halved the wait, and made the pipeline one call.
+
 
 **The briefing is deliberately one LLM call.** An earlier version fanned out
 (summarize each block, then combine), costing N+1 calls per briefing. On a
@@ -84,7 +84,7 @@ worth making, and an API key still works as a fallback.
 | Frontend  | React 19 + Vite + TypeScript + Tailwind v4 |
 | Blocks    | react-grid-layout (drag/resize) + zustand |
 | Backend   | FastAPI (Python) + SQLite |
-| Agents    | LangGraph: supervisor routes → connectors fetch → critic verifies |
+| Agents    | LangGraph: a supervisor routes the request, a connector fetches it |
 | LLM       | **Your AI subscription**: Claude, ChatGPT, or Gemini via their CLIs, no API key |
 | Auth      | Google OAuth, for Gmail only — nothing else needs an account |
 

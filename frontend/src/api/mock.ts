@@ -135,7 +135,7 @@ const seed: Block[] = [
     page_id: "default",
     title: "University mail",
     query: "emails from monash uni",
-    search_terms: "from:monash.edu",
+    plan: { search_terms: "from:monash.edu" },
     source: "gmail",
     layout: { x: 0, y: 14, w: 9, h: 9 },
     status: "ready",
@@ -164,7 +164,7 @@ const seed: Block[] = [
     page_id: "default",
     title: "Grad ML roles",
     query: "graduate machine learning jobs in Melbourne",
-    search_terms: "machine learning graduate",
+    plan: { search_terms: "machine learning graduate" },
     source: "jobs",
     layout: { x: 9, y: 12, w: 8, h: 11 },
     status: "ready",
@@ -249,7 +249,7 @@ export const mockApi: Api = {
     on?.progress?.(`Searching ${place[source] ?? "the web"} for “${query}”`);
     await delay(700);
     on?.progress?.("Reviewing 3 results");
-    on?.preview?.(block("loading")); // raw results, before the critic
+    on?.preview?.(block("loading")); // results, before the block is final
     await delay(900);
     return block("ready");
   },

@@ -12,7 +12,7 @@ export interface Api {
   listBlocks(pageId: string): Promise<Block[]>;
   /** Block creation is slow (two LLM calls), so it reports as it goes:
    *  `created` once the row exists (before any work), `progress` per agent
-   *  step, `preview` once raw results exist but before the critic has judged
+   *  step, `preview` as soon as results exist and before the block is final
    *  them. The promise resolves with the final, checked block. */
   createBlock(
     query: string,

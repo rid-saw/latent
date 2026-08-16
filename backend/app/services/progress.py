@@ -1,9 +1,8 @@
 """Human-readable progress lines for block creation.
 
-Creating a block runs two LLM calls and takes ~47s. A spinner for that long
-reads as broken; the same wait narrated reads as thinking. These lines are
-driven by real graph events, not a timer — each one reports something that
-has actually happened.
+Creating a block can take a minute. A spinner for that long reads as broken;
+the same wait narrated reads as thinking. These lines are driven by real graph
+events, not a timer — each one reports something that has actually happened.
 
 One vocabulary, not one script per source: the graph already knows the source
 and the search terms, so every message is a template with the right noun in
@@ -52,15 +51,7 @@ def searching(source: str, terms: str) -> str:
     return f"Searching {where} for “{shown}”"
 
 
-def reviewing(source: str, n: int) -> str:
-    if not n:
-        return "Nothing came back — checking"
-    return f"Reviewing {n} {_things(source, n)}"
-
-
-def refining(terms: str) -> str:
-    return f"Not quite right — trying “{terms}” instead"
-
-
 def finishing(source: str, n: int) -> str:
-    return f"Keeping the best {n} {_things(source, n)}"
+    if not n:
+        return "Nothing came back"
+    return f"Found {n} {_things(source, n)}"
