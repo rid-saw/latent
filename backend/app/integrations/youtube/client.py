@@ -46,6 +46,7 @@ _ENTRY_RE = re.compile(r"<entry>(.*?)</entry>", re.S)
 # Ceiling on pages requested for a topic search. Enough that the non-video
 # results can be filtered out and still leave the block full; low enough that
 # the search isn't scraping the bottom of the barrel for pages nobody reads.
+# Nothing else in the pipeline fetches more than it shows.
 MAX_WEB_PAGES = 12
 
 
@@ -123,19 +124,19 @@ async def _search_videos_on_the_web(
 ) -> list[ContentItem]:
     """No feed exists for a topic, so search the web and keep the videos.
 
-    `query` is the user's own sentence. Asking for videos is the *search's*
-    job, not something to graft onto what they wrote — so it goes through as
-    `videos_only`, which adds a rule to the wrapper the search already has.
+    `query` is the user's own sentence. `videos_only` selects the search's own
+    video prompt — a separate one, so that changes to how the web answers
+    questions can never quietly change what a video block returns.
 
     What survives has no channel or thumbnail, so oembed fills those in.
     """
     from app.integrations.websearch.client import search_web  # lazy: import cycle
 
-    # Over-fetch, because roughly half of what a web search returns is an
-    # article *about* videos rather than a video — but capped, because
-    # max_results arrives already tripled by the graph's own over-fetch.
-    # Tripling it again asked a search for 27 pages to fill a block of three,
-    # and binned 24 of them a second later.
+    # The one place anything is still over-fetched, and not to give an agent
+    # spares: a web search returns a mix of videos and articles *about* videos,
+    # and only the first kind belongs in a YouTube block. Asking for exactly
+    # max_results would leave the block half empty the moment the articles are
+    # filtered out. Capped so a ten-video block doesn't ask for thirty pages.
     hits = await search_web(
         query,
         max_results=min(max_results * 3, MAX_WEB_PAGES),
@@ -143,16 +144,24 @@ async def _search_videos_on_the_web(
         videos_only=True,
     )
 
-    seen: set[str] = set()
+    # The search reports each video's upload date, and it used to be dropped
+    # here — the card showed a channel name and nothing else, so a 2023 video
+    # was indistinguishable from last week's. oEmbed, which fills in the title
+    # and channel below, has no date field at all, so this is the only place
+    # the date exists.
+    published: dict[str, str] = {}
     ids: list[str] = []
     for hit in hits:
         m = WATCH_RE.search(hit.url)
         if not m:
             continue
         video_id = m.group(1) or m.group(2)
-        if video_id not in seen:
-            seen.add(video_id)
-            ids.append(video_id)
+        if video_id in published:
+            continue
+        # search_web packs the date onto meta as "youtube.com · 2026-07-15".
+        _, _, when = (hit.meta or "").partition(" · ")
+        published[video_id] = when.strip()
+        ids.append(video_id)
     ids = ids[:max_results]
     if not ids:
         return []
@@ -166,7 +175,9 @@ async def _search_videos_on_the_web(
             title=title or "YouTube video",
             url=f"https://www.youtube.com/watch?v={video_id}",
             source="youtube",
-            meta=author or None,
+            # Same shape the channel feed produces, so a video looks the same
+            # whichever path found it.
+            meta=" · ".join(p for p in (author, published[video_id]) if p) or None,
             thumbnail=thumbnail_for(video_id),
         )
         for video_id, (title, author) in zip(ids, details)

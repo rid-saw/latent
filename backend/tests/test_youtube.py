@@ -158,3 +158,30 @@ async def test_topic_search_keeps_videos_and_drops_articles(monkeypatch):
     assert len(items) == 1, "the article is dropped and the duplicate collapsed"
     assert items[0].meta == "Some Channel", "channel filled in from oembed"
     assert items[0].thumbnail.endswith("abc12345678/hqdefault.jpg")
+
+
+async def test_a_searched_video_shows_its_upload_date(monkeypatch):
+    """oEmbed has no date field, so the search's is the only one there is.
+
+    It used to be dropped on the way through, leaving the card showing a
+    channel name and nothing else — a 2023 video looked exactly like last
+    week's, which is how a block of ancient videos went unnoticed.
+    """
+    async def fake_search(query, max_results=3, **kw):
+        return [
+            ContentItem(id="1", title="a video",
+                        url="https://www.youtube.com/watch?v=abc12345678",
+                        source="web", meta="youtube.com · 2026-07-15"),
+            ContentItem(id="2", title="undated",
+                        url="https://www.youtube.com/watch?v=def12345678",
+                        source="web", meta="youtube.com"),
+        ]
+
+    monkeypatch.setattr("app.integrations.websearch.client.search_web", fake_search)
+    monkeypatch.setattr(yt, "_details", lambda c, v: _ok())
+
+    items = await yt.search_videos("rust", max_results=2)
+    assert items[0].meta == "Some Channel · 2026-07-15"
+    # The same shape the channel feed produces, so a video looks the same
+    # whichever path found it — and a missing date leaves no dangling divider.
+    assert items[1].meta == "Some Channel"
