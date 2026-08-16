@@ -106,6 +106,12 @@ async function streamBlock(
         on?.preview?.(parsed.data as unknown as Block);
       } else if (parsed.event === "block") {
         block = parsed.data as unknown as Block;
+      } else if (parsed.event === "gone") {
+        // Deleted while it was being built. Thrown rather than returned so it
+        // travels the same path as any other stream ending without a block —
+        // the caller decides what to do, and what it must not do is put the
+        // block back.
+        throw new ApiError("That block was deleted while it was being built", 410);
       } else if (parsed.event === "error") {
         const status = Number(parsed.data.status) || 500;
         if (status === 401) revalidateGoogle();
