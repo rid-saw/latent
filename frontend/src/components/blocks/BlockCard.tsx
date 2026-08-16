@@ -1,5 +1,12 @@
 import { useRef, useState } from "react";
-import { AlertCircle, GripVertical, Loader2, RefreshCw, X } from "lucide-react";
+import {
+  AlertCircle,
+  ExternalLink,
+  GripVertical,
+  Loader2,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import type { Block, ContentItem, SourceKind } from "@/types";
 import { useBlocks } from "@/stores/blocks";
 import { cn } from "@/lib/cn";
@@ -135,7 +142,69 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
             </button>
           </div>
         ) : (
-          block.items.map((item) =>
+          <Answer block={block} isNew={isNew} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The block's contents, drawn the way the agent decided they should be.
+ *
+ *  Only web varies. Every other source returns things that already are pages —
+ *  an email, a paper, a video — so a link is the whole item and the card is
+ *  chosen by source, as it always was. A web block can be an answer instead:
+ *  a temperature, a method, a table of rentals. */
+function Answer({
+  block,
+  isNew,
+}: {
+  block: Block;
+  isNew: (id: string) => boolean;
+}) {
+  const items = block.items;
+  switch (block.plan?.format) {
+    case "stat":
+      return (
+        <>
+          <StatAnswer item={items[0]} />
+          <Sources items={items} />
+        </>
+      );
+    case "text":
+    case "code":
+      return (
+        <>
+          <ProseAnswer item={items[0]} mono={block.plan?.format === "code"} />
+          <Sources items={items} />
+        </>
+      );
+    case "steps":
+      return (
+        <>
+          <ol className="p-1">
+            {items.map((item, i) => (
+              <ListRow key={item.id} item={item} marker={`${i + 1}`} />
+            ))}
+          </ol>
+          <Sources items={items} />
+        </>
+      );
+    case "bullets":
+      return (
+        <>
+          <ul className="p-1">
+            {items.map((item) => (
+              <ListRow key={item.id} item={item} marker="•" />
+            ))}
+          </ul>
+          <Sources items={items} />
+        </>
+      );
+    default:
+      return (
+        <>
+          {items.map((item) =>
             item.source === "youtube" ? (
               <VideoCard key={item.id} item={item} isNew={isNew(item.id)} />
             ) : item.source === "papers" || item.source === "site" ? (
@@ -143,11 +212,107 @@ export function BlockCard({ block, readOnly }: { block: Block; readOnly?: boolea
             ) : (
               <LinkPreviewCard key={item.id} item={item} isNew={isNew(item.id)} />
             ),
-          )
-        )}
-      </div>
+          )}
+        </>
+      );
+  }
+}
+
+/** One value, big enough to read across the room. "17°C", "A$4.2M". */
+function StatAnswer({ item }: { item?: ContentItem }) {
+  if (!item) return null;
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center">
+      <p className="text-4xl font-semibold leading-none tracking-tight">
+        {item.title}
+      </p>
+      {item.summary && <p className="text-xs text-soft">{item.summary}</p>}
     </div>
   );
+}
+
+/** An explanation or a snippet: the answer is a body of text, so it scrolls
+ *  rather than being clamped to two lines like a preview. */
+function ProseAnswer({ item, mono }: { item?: ContentItem; mono?: boolean }) {
+  if (!item) return null;
+  return (
+    <div className="p-3">
+      {item.summary && !mono && (
+        <p className="mb-2 text-xs text-soft">{item.summary}</p>
+      )}
+      <div
+        className={cn(
+          "whitespace-pre-wrap text-ink",
+          mono
+            ? "rounded-lg bg-surface p-2.5 font-mono text-xs leading-relaxed"
+            : "text-sm leading-relaxed",
+        )}
+      >
+        {item.body || item.title}
+      </div>
+      {mono && item.summary && (
+        <p className="mt-2 text-xs text-soft">{item.summary}</p>
+      )}
+    </div>
+  );
+}
+
+/** One step or one point. The marker carries the ordering, so the text itself
+ *  never repeats it — a step that says "1." would be numbered twice. */
+function ListRow({ item, marker }: { item: ContentItem; marker: string }) {
+  return (
+    <li className="flex gap-2.5 rounded-lg p-2 hover:bg-surface/60">
+      <span className="mt-px w-4 shrink-0 text-right text-xs font-medium tabular-nums text-faint">
+        {marker}
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm leading-relaxed">{item.title}</p>
+        {item.summary && (
+          <p className="mt-0.5 text-xs text-soft">{item.summary}</p>
+        )}
+        <Fields fields={item.fields} />
+      </div>
+    </li>
+  );
+}
+
+/** Where the answer came from, under the answer rather than instead of it.
+ *
+ *  Deduplicated, because a ten-step recipe read off one page would otherwise
+ *  print the same link ten times. Several sources stay several: a set of facts
+ *  gathered from three places should say so. */
+function Sources({ items }: { items: ContentItem[] }) {
+  const seen = new Map<string, string>();
+  for (const item of items) {
+    if (item.url && !seen.has(item.url)) seen.set(item.url, domainOf(item.url));
+  }
+  if (!seen.size) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+      <span className="text-[10px] uppercase tracking-wider text-faint">
+        {seen.size === 1 ? "source" : "sources"}
+      </span>
+      {[...seen].map(([url, label]) => (
+        <a
+          key={url}
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] text-soft hover:text-ink"
+        >
+          {label} <ExternalLink size={10} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "source";
+  }
 }
 
 /** Shown when a block's last fetch failed — always with a way out.
@@ -229,10 +394,8 @@ function PaperCover({ item }: { item: ContentItem }) {
 function PaperCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
   const [imgFailed, setImgFailed] = useState(false);
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
+    <ItemShell
+      item={item}
       className="relative block overflow-hidden transition hover:bg-surface/60"
     >
       {isNew && <NewBadge />}
@@ -261,18 +424,17 @@ function PaperCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
             {item.summary}
           </p>
         )}
+        <Fields fields={item.fields} />
       </div>
-    </a>
+    </ItemShell>
   );
 }
 
 /** Link-preview style (WhatsApp/OG): thumbnail beside title, source name, summary. */
 function LinkPreviewCard({ item, isNew }: { item: ContentItem; isNew?: boolean }) {
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
+    <ItemShell
+      item={item}
       className="relative flex gap-3 overflow-hidden p-2 transition hover:bg-surface/60"
     >
       {isNew && <NewBadge />}
@@ -284,7 +446,7 @@ function LinkPreviewCard({ item, isNew }: { item: ContentItem; isNew?: boolean }
           className="h-16 w-24 shrink-0 rounded-md object-cover"
         />
       )}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         {item.meta && (
           <p className="truncate text-[11px] font-medium uppercase tracking-wide text-faint">
             {item.meta}
@@ -296,7 +458,51 @@ function LinkPreviewCard({ item, isNew }: { item: ContentItem; isNew?: boolean }
             {item.summary}
           </p>
         )}
+        <Fields fields={item.fields} />
       </div>
+    </ItemShell>
+  );
+}
+
+/** Wraps an item in a link, unless it isn't one.
+ *
+ *  A row can be a thing rather than a page — a sale, a fact, a slang term. It
+ *  still carries the page it was read from where one exists, but when it
+ *  doesn't, an anchor with an empty href navigates to the dashboard itself. */
+function ItemShell({
+  item,
+  className,
+  children,
+}: {
+  item: ContentItem;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (!item.url) return <div className={className}>{children}</div>;
+  return (
+    <a href={item.url} target="_blank" rel="noreferrer" className={className}>
+      {children}
     </a>
+  );
+}
+
+/** The named values on an item: citations on a paper, a price on a sale.
+ *
+ *  Laid out as label-above-value pairs rather than a "a · b · c" line, because
+ *  the point of these is that "514" means nothing without "citations" over it. */
+function Fields({ fields }: { fields?: Record<string, string> }) {
+  const entries = Object.entries(fields ?? {});
+  if (!entries.length) return null;
+  return (
+    <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+      {entries.map(([name, value]) => (
+        <div key={name} className="min-w-0">
+          <dt className="text-[9.5px] uppercase tracking-wider text-faint">
+            {name}
+          </dt>
+          <dd className="truncate text-xs font-medium text-ink">{value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

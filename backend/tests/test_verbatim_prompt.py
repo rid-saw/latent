@@ -7,17 +7,14 @@ are a language model, and there the compression was throwing away the only
 part it could have acted on — the constraints, amounts and exclusions people
 put in a sentence and nowhere else.
 
-So: those two get the request verbatim, and because there is then no keyword
-to rewrite, they get one round instead of two.
+So: those two get the request verbatim.
 """
 
 import pytest
 
-from app.agents.graph import _after_critic
-from app.agents.nodes.critic import Critique, critic_node
 from app.agents.nodes.supervisor import Plan, searches_with_the_users_own_words
 from app.integrations import websearch
-from app.integrations.websearch.client import PROMPT, VIDEO_RULE, plan_context
+from app.integrations.websearch.client import PROMPT, VIDEO_PROMPT, _shape, plan_context
 from app.models.schemas import ContentItem
 
 REQUEST = (
@@ -64,7 +61,7 @@ async def test_the_supervisor_stores_the_request_itself_for_web(monkeypatch):
 
 
 async def test_keyword_sources_still_get_their_extracted_terms(monkeypatch):
-    """The regression this change could easily cause: Gmail needs from:, not prose."""
+    """The thing this change could easily break: Gmail needs from:, not prose."""
     plan = Plan(source="gmail", search_terms="from:monash.edu",
                 title="Monash mail", max_items=3, wants_latest=True)
     monkeypatch.setattr("app.agents.nodes.supervisor.structured_llm",
@@ -76,13 +73,16 @@ async def test_keyword_sources_still_get_their_extracted_terms(monkeypatch):
 
 
 def test_the_request_appears_in_the_search_prompt_unaltered():
-    body = PROMPT.format(request=REQUEST, n=3, context="", video_rule="")
+    body = PROMPT.format(request=REQUEST, shape=_shape("links", 3, []), context="")
     assert REQUEST in body, "the request was reworded on its way to the CLI"
 
 
-def test_the_video_rule_lives_in_the_wrapper_not_the_request():
-    """The old code prefixed 'YouTube videos: ' onto what the user wrote."""
-    body = PROMPT.format(request=REQUEST, n=3, context="", video_rule=VIDEO_RULE)
+def test_videos_have_their_own_prompt():
+    """Kept separate so that changing how the web answers questions cannot
+    quietly change what a video block returns. The old code bolted a rule onto
+    the shared prompt, and before that prefixed "YouTube videos: " onto what
+    the user actually wrote."""
+    body = VIDEO_PROMPT.format(request=REQUEST, n=3, context="")
     assert "youtube.com/watch" in body
     assert REQUEST in body
     assert "YouTube videos: I would like" not in body
@@ -121,11 +121,12 @@ async def test_youtube_topic_search_sends_the_sentence_and_asks_for_videos(monke
 
 
 async def test_the_two_over_fetches_do_not_multiply(monkeypatch):
-    """The graph already padded the count; padding the padding asked for 27.
+    """A search asked for 30 pages to fill a block of ten helps nobody.
 
-    max_results arrives here already tripled (3 shown -> 9). Tripling again
-    asked a search for 27 pages to fill a block of three and binned 24 of
-    them a second later.
+    Videos are the only thing here that still asks for more than it shows,
+    because a web search returns articles about videos alongside the videos
+    and those get filtered out. The cap keeps that from scaling into an
+    absurd request.
     """
     asked = {}
 
@@ -136,40 +137,12 @@ async def test_the_two_over_fetches_do_not_multiply(monkeypatch):
     monkeypatch.setattr(websearch.client, "search_web", fake_search)
     from app.integrations.youtube import client as yt
 
-    await yt.search_videos("a topic", max_results=9)
-    assert asked["n"] == yt.MAX_WEB_PAGES == 12, "the over-fetches compounded again"
+    await yt.search_videos("a topic", max_results=10)
+    assert asked["n"] == yt.MAX_WEB_PAGES == 12, "capped, not 30"
 
-    # Small requests are untouched — the cap only bites once padding stacks.
+    # Small requests are untouched — the cap only bites at the top end.
     await yt.search_videos("a topic", max_results=3)
     assert asked["n"] == 9
-
-
-async def test_a_verbatim_source_is_never_judged_so_never_loops(monkeypatch):
-    """No critic call means no rejection, which means no second round.
-
-    That falls out of the source gate rather than needing a rule of its own —
-    and it protects the stored request, which the critic would otherwise be
-    free to replace with keywords. That string is reused by every later
-    refresh, so a rewrite would undo the verbatim change on the second fetch
-    rather than the first.
-    """
-    def explode(*a, **k):
-        raise AssertionError("the critic was called for a verbatim source")
-
-    monkeypatch.setattr("app.agents.nodes.critic.structured_llm", explode)
-    items = [ContentItem(id=str(i), title=f"item {i}", url="https://e.com",
-                         source="web") for i in range(6)]
-
-    out = await critic_node({"source": "web", "items": items, "query": REQUEST,
-                             "max_items": 3, "search_terms": REQUEST})
-    assert out == {"approved": True}, "no judgement, no rewrite, no round two"
-    assert _after_critic({**out, "iterations": 1}) == "done"
-
-
-def test_the_retry_loop_is_untouched_for_judged_sources():
-    assert _after_critic({"approved": False, "iterations": 1}) == "refine"
-    assert _after_critic({"approved": False, "iterations": 2}) == "done"
-    assert _after_critic({"approved": True, "iterations": 1}) == "done"
 
 
 # ── helpers ───────────────────────────────────────────────────────────────

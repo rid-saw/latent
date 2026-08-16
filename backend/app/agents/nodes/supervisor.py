@@ -42,6 +42,42 @@ newsletters merely mentioning them, which is not what "from" means.
 - Mail ABOUT a topic -> plain keywords: "emails about my enrolment" -> \
 "enrolment".
 
+For web: `format` decides how the answer appears on the block. The block IS \
+the answer — not a list of places to go and find it. Pick the shape the answer \
+naturally takes.
+
+  stat     one value is the whole answer
+           "what's the temperature in Melbourne" · "AUD to USD right now"
+
+  text     an explanation, written as prose
+           "how does superannuation work" · "why is the sky blue"
+
+  bullets  several short points where order does not matter
+           "three facts about Roman history" · "what's new in Python 3.14"
+
+  steps    an ordered procedure where order does matter
+           "how do I make cold brew" · "brown butter chocolate chip cookies"
+           set max_items to however many steps the method really takes
+
+  table    several of the same kind of thing, compared on the same columns
+           "homes for rent in Melbourne CBD under $400 a week"
+           "all the paintings sold in Australia for over $1M"
+
+  code     a snippet the user will copy
+           "how do I reverse a list in Python"
+
+  links    pages worth opening in full, where summarising loses the point
+           "best noise-cancelling headphones under $300"
+
+Only `table` uses `fields`: 1-4 lowercase column names — "price", "bedrooms", \
+"address". Never the thing's own name, that is its title. Never a link, source \
+or url, every row carries one automatically. Leave `fields` empty for every \
+other format.
+
+`links` is the last resort, not the default. Reach for it only when the value \
+really is in opening the page — a long review, an argument, something visual. \
+If the question has an answer, answer it.
+
 User request: {query}"""
 
 
@@ -62,13 +98,29 @@ class Plan(BaseModel):
     title: str = Field(description="Short block title, max 5 words")
     max_items: int = Field(
         ge=1,
-        le=10,
-        description="How many items to show: the number the user asked for if they "
-        "named one, else 3",
+        le=20,
+        description="How many items the answer needs: the number they named, "
+        "or for steps and bullets however many the answer actually takes (a "
+        "recipe is 6-12 steps). Otherwise 3.",
     )
     wants_latest: bool = Field(
         description="True if the user wants the newest/most recent items "
         "(e.g. 'latest', 'newest', 'new videos from X') rather than the most relevant"
+    )
+    format: Literal[
+        "links", "text", "bullets", "steps", "table", "stat", "code"
+    ] = Field(
+        default="links",
+        description="For web only: how the answer should be laid out on the "
+        "block. See the seven options above; pick the shape the answer "
+        "naturally takes, and only fall back to 'links' when reading the page "
+        "is genuinely the point.",
+    )
+    fields: list[str] = Field(
+        default_factory=list,
+        description="For format='table' only: 1-4 lowercase column names "
+        "('paintings sold over $1M' -> ['artist', 'price', 'date']). Empty "
+        "for every other format.",
     )
 
 
@@ -104,4 +156,9 @@ async def supervisor_node(state: BlockAgentState) -> dict:
         "title": plan.title,
         "max_items": plan.max_items,
         "wants_latest": plan.wants_latest,
+        # Only web chooses a layout. Every other source returns pages, so
+        # "links" is the only shape that fits, and asking one of them for
+        # columns would promise something its API cannot fill.
+        "format": plan.format if plan.source == "web" else "links",
+        "fields": plan.fields if plan.source == "web" and plan.format == "table" else [],
     }
