@@ -47,7 +47,8 @@ async def test_the_supervisor_stores_the_request_itself_for_web(monkeypatch):
     searches with the same detail the first fetch had.
     """
     plan = Plan(source="web", search_terms="Australian art auction A$1M",
-                title="Australian art sales", max_items=3, wants_latest=True)
+                title="Australian art sales", max_items=3, wants_latest=True,
+                named_a_count=False)
     monkeypatch.setattr("app.agents.nodes.supervisor.structured_llm",
                         lambda *a, **k: _returns(plan))
 
@@ -63,7 +64,8 @@ async def test_the_supervisor_stores_the_request_itself_for_web(monkeypatch):
 async def test_keyword_sources_still_get_their_extracted_terms(monkeypatch):
     """The thing this change could easily break: Gmail needs from:, not prose."""
     plan = Plan(source="gmail", search_terms="from:monash.edu",
-                title="Monash mail", max_items=3, wants_latest=True)
+                title="Monash mail", max_items=3, wants_latest=True,
+                named_a_count=False)
     monkeypatch.setattr("app.agents.nodes.supervisor.structured_llm",
                         lambda *a, **k: _returns(plan))
 
@@ -158,3 +160,33 @@ async def _supervise(query: str) -> dict:
     from app.agents.nodes.supervisor import supervisor_node
 
     return await supervisor_node({"query": query})
+
+
+# ── how many items a block shows ──────────────────────────────────────────
+@pytest.mark.parametrize(
+    "named,fmt,asked,expected,why",
+    [
+        (False, "links", 5, 3, "no number named: three, whatever the model chose"),
+        (False, "table", 8, 3, "same for a table of things"),
+        (False, "stat", 4, 3, "and for anything else"),
+        (True, "links", 5, 5, "'give me 5' is honoured"),
+        (True, "table", 10, 10, "so is 'the 10 highest rated'"),
+        (False, "steps", 10, 10, "a method has as many steps as it has"),
+        (False, "bullets", 7, 7, "same for points"),
+        (True, "steps", 4, 4, "and a named count still wins"),
+    ],
+)
+def test_the_item_count_is_decided_in_code(named, fmt, asked, expected, why):
+    """Left to the instruction alone, this drifted.
+
+    It read "the number they asked for, else 3" and held — until a clause was
+    added letting recipes size themselves, after which unrelated blocks came
+    back with five items instead of three. Same prompt, same code, different
+    answers run to run. So the model reports whether a number was named and
+    the count is clamped here.
+    """
+    from app.agents.nodes.supervisor import how_many_items
+
+    plan = Plan(source="web", search_terms="q", title="t", wants_latest=False,
+                named_a_count=named, format=fmt, max_items=asked)
+    assert how_many_items(plan) == expected, why

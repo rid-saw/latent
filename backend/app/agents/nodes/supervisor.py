@@ -96,6 +96,10 @@ class Plan(BaseModel):
         "topic and gets searched.",
     )
     title: str = Field(description="Short block title, max 5 words")
+    named_a_count: bool = Field(
+        description="True only if the user said how many they want — 'three "
+        "facts', '5 most recent emails', 'give me 10'. False if they did not.",
+    )
     max_items: int = Field(
         ge=1,
         le=20,
@@ -122,6 +126,28 @@ class Plan(BaseModel):
         "('paintings sold over $1M' -> ['artist', 'price', 'date']). Empty "
         "for every other format.",
     )
+
+
+DEFAULT_ITEMS = 3
+
+# Formats whose length is set by the answer rather than by a preference: a
+# method has as many steps as it has, and cutting it at three leaves you
+# holding a third of a recipe.
+_SIZED_BY_THE_ANSWER = {"steps", "bullets"}
+
+
+def how_many_items(plan: "Plan") -> int:
+    """The count the block will actually use.
+
+    Clamped here rather than trusted from the model. The instruction alone
+    read "the number they asked for, else 3", and it held until a clause was
+    added letting recipes size themselves — after which unrelated blocks
+    quietly started coming back with five items instead of three. The model
+    was not wrong so much as given room, so the room is removed.
+    """
+    if plan.named_a_count or plan.format in _SIZED_BY_THE_ANSWER:
+        return plan.max_items
+    return DEFAULT_ITEMS
 
 
 def searches_with_the_users_own_words(source: str, channel: str) -> bool:
@@ -154,7 +180,7 @@ async def supervisor_node(state: BlockAgentState) -> dict:
         "location": plan.location,
         "channel": plan.channel,
         "title": plan.title,
-        "max_items": plan.max_items,
+        "max_items": how_many_items(plan),
         "wants_latest": plan.wants_latest,
         # Only web chooses a layout. Every other source returns pages, so
         # "links" is the only shape that fits, and asking one of them for
